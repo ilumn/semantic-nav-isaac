@@ -1,0 +1,263 @@
+chair:
+  aliases: [office chair, seat]
+  parents: [furniture, seat, static_landmark]
+  affordances: [landmark, obstacle, human_workspace_context]
+  mobility: static
+  support_priors: [floor]
+  place_priors: [workspace, office_corner]
+
+desk:
+  aliases: [work desk, workstation]
+  parents: [furniture, support_surface, workspace_anchor]
+  affordances: [surface, landmark, workspace_context]
+  mobility: static
+  support_priors: [floor]
+  place_priors: [workspace, office_corner]
+
+table:
+  aliases: [dining table, side table]
+  parents: [furniture, support_surface]
+  affordances: [surface, landmark]
+  mobility: static
+  support_priors: [floor]
+  place_priors: [workspace, dining_area, lounge]
+
+door:
+  aliases: [doorway]
+  parents: [transition_landmark, structural_element]
+  affordances: [room_transition, navigation_landmark]
+  mobility: static
+  support_priors: [wall_boundary]
+  place_priors: [transition_zone]
+
+monitor:
+  aliases: [display, screen]
+  parents: [electronics, workspace_object]
+  affordances: [inspection_target, workspace_context]
+  mobility: static
+  support_priors: [desk, table, wall_boundary]
+  place_priors: [workspace]
+
+keyboard:
+  aliases: [computer keyboard]
+  parents: [workspace_object, tabletop_object]
+  affordances: [interaction_target, workspace_context]
+  mobility: movable
+  support_priors: [desk, table]
+  place_priors: [workspace]
+
+cup:
+  aliases: [mug, tumbler]
+  parents: [container, tabletop_object, movable_object]
+  affordances: [pickup_candidate, tabletop_item]
+  mobility: movable
+  support_priors: [desk, table, counter]
+  place_priors: [workspace, kitchen_like]
+
+bottle:
+  aliases: [water bottle]
+  parents: [container, tabletop_object, movable_object]
+  affordances: [pickup_candidate, tabletop_item]
+  mobility: movable
+  support_priors: [desk, table, counter]
+  place_priors: [workspace, kitchen_like]
+
+backpack:
+  aliases: [bag]
+  parents: [movable_object, container]
+  affordances: [pickup_candidate, personal_item]
+  mobility: movable
+  support_priors: [floor, chair, table]
+  place_priors: [workspace, entry_area]
+
+cabinet:
+  aliases: [storage cabinet]
+  parents: [furniture, storage]
+  affordances: [landmark, storage_context]
+  mobility: static
+  support_priors: [floor]
+  place_priors: [workspace, room_cluster]
+
+plant:
+  aliases: [potted plant]
+  parents: [decor, landmark]
+  affordances: [landmark]
+  mobility: static
+  support_priors: [floor, table, cabinet]
+  place_priors: [workspace, lounge]
+
+trash can:
+  aliases: [bin]
+  parents: [utility_object, receptacle]
+  affordances: [landmark]
+  mobility: static
+  support_priors: [floor]
+  place_priors: [workspace, room_cluster]
+
+sofa:
+  aliases: [couch]
+  parents: [furniture, seat, lounge_anchor]
+  affordances: [landmark, seating]
+  mobility: static
+  support_priors: [floor]
+  place_priors: [lounge]
+
+bed:
+  aliases: [mattress]
+  parents: [furniture, sleeping_anchor]
+  affordances: [landmark]
+  mobility: static
+  support_priors: [floor]
+  place_priors: [sleeping_area]
+
+person:
+  aliases: [human]
+  parents: [dynamic_agent]
+  affordances: [dynamic_obstacle]
+  mobility: dynamic
+  support_priors: [floor]
+  place_priors: [workspace, room_cluster]
+
+car:
+  aliases: [sedan, suv]
+  parents: [vehicle, movable_object]
+  affordances: [navigation_obstacle, street_landmark]
+  mobility: dynamic
+  support_priors: [road, driveway]
+  place_priors: [street_corridor, residential_cluster]
+
+truck:
+  aliases: [pickup truck, van]
+  parents: [vehicle, movable_object]
+  affordances: [navigation_obstacle, street_landmark]
+  mobility: dynamic
+  support_priors: [road, driveway]
+  place_priors: [street_corridor, residential_cluster]
+
+bicycle:
+  aliases: [bike]
+  parents: [vehicle, movable_object]
+  affordances: [navigation_obstacle, movable_landmark]
+  mobility: movable
+  support_priors: [road, driveway, sidewalk]
+  place_priors: [street_corridor, residential_cluster]
+
+motorcycle:
+  aliases: [motorbike]
+  parents: [vehicle, movable_object]
+  affordances: [navigation_obstacle, movable_landmark]
+  mobility: movable
+  support_priors: [road, driveway]
+  place_priors: [street_corridor, residential_cluster]
+
+building:
+  aliases: [structure]
+  parents: [structural_element, landmark, static_landmark]
+  affordances: [navigation_landmark, place_anchor]
+  mobility: static
+  support_priors: [ground_plane]
+  place_priors: [residential_cluster, street_corridor]
+
+house:
+  aliases: [home]
+  parents: [building, structural_element, landmark]
+  affordances: [navigation_landmark, residential_context]
+  mobility: static
+  support_priors: [ground_plane]
+  place_priors: [residential_cluster]
+
+roof:
+  aliases: [rooftop]
+  parents: [support_surface, structural_element, landmark]
+  affordances: [landmark, overhead_structure]
+  mobility: static
+  support_priors: [building, house]
+  place_priors: [residential_cluster]
+
+tree:
+  aliases: [oak, palm]
+  parents: [vegetation, landmark, static_landmark]
+  affordances: [landmark, outdoor_context]
+  mobility: static
+  support_priors: [ground_plane, lawn, yard]
+  place_priors: [yard, residential_cluster, street_edge]
+
+bush:
+  aliases: [shrub]
+  parents: [vegetation, landmark]
+  affordances: [landmark, outdoor_context]
+  mobility: static
+  support_priors: [ground_plane, lawn, yard]
+  place_priors: [yard, residential_cluster]
+
+road:
+  aliases: [street]
+  parents: [support_surface, ground_plane, route_surface]
+  affordances: [navigation_surface, street_context]
+  mobility: static
+  support_priors: [ground_plane]
+  place_priors: [street_corridor]
+
+driveway:
+  aliases: [drive]
+  parents: [support_surface, ground_plane, route_surface]
+  affordances: [navigation_surface, residential_context]
+  mobility: static
+  support_priors: [ground_plane]
+  place_priors: [street_edge, residential_cluster]
+
+sidewalk:
+  aliases: [footpath]
+  parents: [support_surface, ground_plane, route_surface]
+  affordances: [navigation_surface, pedestrian_context]
+  mobility: static
+  support_priors: [ground_plane]
+  place_priors: [street_edge, street_corridor]
+
+fence:
+  aliases: [railing]
+  parents: [boundary, structural_element, landmark]
+  affordances: [boundary_context, navigation_landmark]
+  mobility: static
+  support_priors: [ground_plane]
+  place_priors: [yard, residential_cluster]
+
+garage:
+  aliases: [garage door]
+  parents: [building, structural_element, landmark]
+  affordances: [navigation_landmark, residential_context]
+  mobility: static
+  support_priors: [ground_plane]
+  place_priors: [residential_cluster, street_edge]
+
+mailbox:
+  aliases: [post box]
+  parents: [utility_object, landmark]
+  affordances: [street_landmark]
+  mobility: static
+  support_priors: [ground_plane, sidewalk, lawn]
+  place_priors: [street_edge, residential_cluster]
+
+utility pole:
+  aliases: [power pole, pole]
+  parents: [utility_object, landmark, structural_element]
+  affordances: [street_landmark]
+  mobility: static
+  support_priors: [ground_plane]
+  place_priors: [street_edge, street_corridor]
+
+lawn:
+  aliases: [grass]
+  parents: [support_surface, ground_plane]
+  affordances: [ground_context, yard_context]
+  mobility: static
+  support_priors: [ground_plane]
+  place_priors: [yard, residential_cluster]
+
+pool:
+  aliases: [swimming pool]
+  parents: [landmark, outdoor_fixture]
+  affordances: [yard_landmark]
+  mobility: static
+  support_priors: [ground_plane]
+  place_priors: [yard, residential_cluster]

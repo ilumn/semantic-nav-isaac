@@ -1,0 +1,62 @@
+# ============================================================
+# tb3_semantic_map — semantic_map_node configuration
+# ============================================================
+
+semantic_map_node:
+  ros__parameters:
+    # ── Inputs ────────────────────────────────────────────
+    image_topic: "/camera/image_raw"
+    camera_info_topic: "/camera/camera_info"
+    scan_topic: "/scan"
+    map_topic: "/map"
+    semantic_targets_file: ""
+
+    # ── Outputs ───────────────────────────────────────────
+    state_topic: "/semantic_map/state"
+    compat_topic: "/semantic_map/compat_objects"
+    markers_topic: "/semantic_map/markers"
+    status_topic: "/semantic_map/status"
+    debug_image_topic: "/semantic_map/debug_image"
+    refined_state_topic: "/semantic_map/refined_state"
+
+    # ── Frames ────────────────────────────────────────────
+    target_frame: "map"
+    robot_base_frame: "base_link"
+    camera_frame: ""
+
+    # ── Detection / sampling ─────────────────────────────
+    detector_backend: "yolov8"
+    model_path: "yolov8n.pt"
+    device: "cpu"
+    enable_tracking: false
+    class_filter: ["__from_targets__"]
+    frame_sample_interval_sec: 0.5
+    detector_confidence_threshold: 0.15
+    publish_debug_image: true
+
+    # ── Grounding ─────────────────────────────────────────
+    camera_hfov_deg: 62.2
+    camera_base_tx: 0.0
+    camera_base_ty: 0.0
+    camera_base_yaw_deg: 0.0
+    scan_window_half: 5
+    min_valid_range: 0.12
+    max_valid_range: 8.0
+    bearing_sigma_deg: 2.0
+    range_sigma_ratio: 0.08
+    min_range_sigma_m: 0.05
+    tf_timeout_sec: 0.3
+
+    # ── Matching / publication ───────────────────────────
+    entity_match_distance_m: 1.0
+    position_smoothing_alpha: 0.3
+    stale_timeout: 5.0
+    remove_timeout: 30.0
+    publish_rate: 2.0
+    enable_refinement_enrichment: true
+    refinement_match_distance_m: 1.0
+    refinement_min_confidence: 0.55
+
+    # ── Visualization ────────────────────────────────────
+    sphere_radius: 0.18
+    text_offset_z: 0.45

@@ -1,0 +1,45 @@
+# OS and editor noise
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Python caches and local build output
+__pycache__/
+*.py[cod]
+.coverage
+.coverage.*
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+htmlcov/
+*.egg-info/
+
+# Local runtimes and virtual environments
+.cache/
+.local-bin/
+.runtime_home/
+.ultralytics/
+.venv/
+.venv-models/
+
+# Runtime artifacts and debug output
+data/jobs/
+data/debug/
+*.log
+*.db
+*.sqlite*
+
+# Downloaded model weights and binaries
+assets/models/*.pt
+assets/models/*.onnx
+assets/models/*.engine
+assets/models/*.caffemodel
+assets/models/*.tflite
+yolov8*-world*.pt
+
+# Local media used for ad hoc debugging
+American Neighborhood Sunset Aerial.mp4

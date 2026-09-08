@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#eef2f6" />
+    <title>Semantic Nav Memory</title>
+    <link rel="stylesheet" href="/app.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <div class="app-shell">
+      <main id="main-content" class="workspace">
+        <aside class="panel panel-left">
+          <section class="section-block">
+            <h1 class="workspace-title">Semantic Nav Memory</h1>
+            <h2>Build Map</h2>
+            <p class="section-copy">Upload a clip and optional extra classes.</p>
+            <form id="upload-form" class="upload-form" novalidate>
+              <div class="field-row">
+                <label class="field">
+                  <span>Prompt preset</span>
+                  <select id="prompt-preset" name="preset" autocomplete="off"></select>
+                  <small id="preset-note" class="field-note">Loading preset vocabulary…</small>
+                </label>
+                <label class="field">
+                  <span>Model size</span>
+                  <select id="model-size" name="model_size" autocomplete="off"></select>
+                  <small id="model-note" class="field-note">Loading detector sizes…</small>
+                </label>
+              </div>
+              <label class="field">
+                <span>Video file</span>
+                <input id="video-file" name="file" type="file" accept="video/*" required aria-describedby="video-file-error" />
+                <small id="video-file-error" class="field-error" aria-live="polite"></small>
+              </label>
+              <label class="field">
+                <span>Additional prompts</span>
+                <textarea
+                  id="prompts"
+                  name="prompts"
+                  rows="5"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="Optional extra classes, one per line or comma-separated…"
+                ></textarea>
+              </label>
+              <button id="submit-button" class="primary-button" type="submit">
+                <span class="button-label">Build Semantic Map</span>
+                <span class="button-spinner" aria-hidden="true"></span>
+              </button>
+            </form>
+          </section>
+
+          <section class="section-block">
+            <h2>Processing Status</h2>
+            <div class="progress-wrap">
+              <div class="progress-track">
+                <div id="progress-fill" class="progress-fill"></div>
+              </div>
+              <div id="progress-label" class="progress-label" aria-live="polite">Idle</div>
+            </div>
+            <dl class="status-grid">
+              <div>
+                <dt>Job</dt>
+                <dd id="job-id">None</dd>
+              </div>
+              <div>
+                <dt>Stage</dt>
+                <dd id="job-stage">Waiting</dd>
+              </div>
+              <div>
+                <dt>State</dt>
+                <dd id="job-state">Ready</dd>
+              </div>
+            </dl>
+            <p id="job-error" class="error-text" role="status" aria-live="polite"></p>
+          </section>
+
+          <section class="section-block">
+            <h2>Selection</h2>
+            <div id="inspector" class="inspector">
+              <p>Select an entity in the viewer or graph.</p>
+            </div>
+          </section>
+        </aside>
+
+        <section class="viewer-column">
+          <div class="viewer-stage">
+            <div class="stage-switch" role="tablist" aria-label="Preview mode">
+              <button
+                id="tab-3d"
+                type="button"
+                class="control-button control-button-active"
+                role="tab"
+                aria-selected="true"
+                aria-controls="pane-3d"
+                tabindex="0"
+              >
+                Scene
+              </button>
+              <button
+                id="tab-video"
+                type="button"
+                class="control-button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="pane-video"
+                tabindex="-1"
+              >
+                Video
+              </button>
+              <button
+                id="tab-graph"
+                type="button"
+                class="control-button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="pane-graph"
+                tabindex="-1"
+              >
+                Graph
+              </button>
+            </div>
+            <div id="pane-3d" class="viewer-pane viewer-pane-active" role="tabpanel" aria-labelledby="tab-3d">
+              <div class="viewer-frame">
+                <canvas id="viewer-canvas" aria-label="Interactive 3D semantic map viewer" aria-describedby="viewer-caption"></canvas>
+                <div class="summary-strip">
+                  <dl id="summary-grid" class="summary-grid">
+                    <div>
+                      <dt>Profile</dt>
+                      <dd>General</dd>
+                    </div>
+                    <div>
+                      <dt>Preset</dt>
+                      <dd>General</dd>
+                    </div>
+                    <div>
+                      <dt>Keyframes</dt>
+                      <dd>0</dd>
+                    </div>
+                    <div>
+                      <dt>Cameras</dt>
+                      <dd>0</dd>
+                    </div>
+                    <div>
+                      <dt>Points</dt>
+                      <dd>0</dd>
+                    </div>
+                    <div>
+                      <dt>Observations</dt>
+                      <dd>0</dd>
+                    </div>
+                    <div>
+                      <dt>Entities</dt>
+                      <dd>0</dd>
+                    </div>
+                    <div>
+                      <dt>Relations</dt>
+                      <dd>0</dd>
+                    </div>
+                  </dl>
+                </div>
+                <div class="viewer-overlay">
+                  <span id="rotation-value" class="rotation-chip">0°</span>
+                  <p id="viewer-caption" aria-live="polite">Load a processed scene to inspect the reconstructed map.</p>
+                </div>
+              </div>
+            </div>
+            <div id="pane-video" class="viewer-pane viewer-pane-hidden" role="tabpanel" aria-labelledby="tab-video" hidden>
+              <div class="video-shell">
+                <div class="video-frame">
+                  <video id="inspection-video" playsinline preload="metadata" aria-label="Video inspection view"></video>
+                  <svg id="video-relations" class="video-relations" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+                  <div id="video-overlays" class="video-overlays" aria-live="polite"></div>
+                  <section id="video-card" class="video-card" hidden aria-live="polite">
+                    <div class="video-card-head">
+                      <div>
+                        <h3 id="video-card-title">Detection</h3>
+                        <p id="video-card-subtitle" class="video-card-subtitle">Select a box to inspect it.</p>
+                      </div>
+                      <button id="video-card-close" type="button" class="video-card-close" aria-label="Close detection card">Close</button>
+                    </div>
+                    <dl id="video-card-metrics" class="video-card-metrics"></dl>
+                    <div class="video-card-section">
+                      <h4>Relations</h4>
+                      <ul id="video-card-relations" class="video-card-list"></ul>
+                    </div>
+                  </section>
+                  <div id="video-empty" class="video-empty">Load a processed scene to inspect detections over the source video.</div>
+                </div>
+                <div class="video-toolbar">
+                  <div class="video-transport">
+                    <button id="video-play-toggle" type="button" class="control-button video-transport-button">Play</button>
+                    <button id="video-prev-keyframe" type="button" class="control-button video-transport-button">Prev Keyframe</button>
+                    <button id="video-next-keyframe" type="button" class="control-button video-transport-button">Next Keyframe</button>
+                  </div>
+                  <label class="video-scrubber-wrap">
+                    <span class="video-scrubber-label">Scrub</span>
+                    <input id="video-scrubber" class="video-scrubber" type="range" min="0" max="0" step="0.01" value="0" />
+                  </label>
+                  <div class="video-meta">
+                    <span id="video-time">00:00 / 00:00</span>
+                    <span id="video-keyframe">No keyframe</span>
+                    <span id="video-detection-count">0 detections</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="pane-graph" class="viewer-pane viewer-pane-hidden" role="tabpanel" aria-labelledby="tab-graph" hidden>
+              <div class="graph-shell">
+                <div class="graph-head">
+                  <div>
+                    <h2>Graph View</h2>
+                    <p class="section-copy">Full scene graph with all entities, places, relations, and detection counts.</p>
+                  </div>
+                  <span id="graph-meta" class="floating-meta">No scene</span>
+                </div>
+                <div class="graph-layout">
+                  <div class="graph-canvas-wrap">
+                    <svg id="graph-canvas" class="graph-canvas" viewBox="0 0 1100 720" aria-label="Scene graph view"></svg>
+                  </div>
+                  <div class="graph-sidebar">
+                    <section class="graph-panel">
+                      <h3>Relations</h3>
+                      <pre id="graph-relations" class="graph-output">relations: none</pre>
+                    </section>
+                    <section class="graph-panel">
+                      <h3>Entities & Detections</h3>
+                      <pre id="graph-stats" class="graph-output">detections: none</pre>
+                    </section>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

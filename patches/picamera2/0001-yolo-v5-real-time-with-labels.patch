@@ -1,0 +1,29 @@
+diff --git a/examples/tensorflow/yolo_v5_real_time_with_labels.py b/examples/tensorflow/yolo_v5_real_time_with_labels.py
+index 12d2248..5654de5 100644
+--- a/examples/tensorflow/yolo_v5_real_time_with_labels.py
++++ b/examples/tensorflow/yolo_v5_real_time_with_labels.py
+@@ -28,9 +28,9 @@ import cv2
+ import numpy as np
+ from ai_edge_litert.interpreter import Interpreter
+ 
+-from picamera2 import MappedArray, Picamera2, Platform, Preview
++from picamera2 import MappedArray, Picamera2, Preview
+ 
+-normalSize = (1920, 1080)
++normalSize = (640, 640)
+ lowresSize = (640, 640)  # Shape Yolov5 s was trained with
+ # if using other yolov5 flavour then image from stream will be resized accordingly.
+ 
+@@ -91,11 +91,9 @@ def main():
+     else:
+         labels = None
+     picam2 = Picamera2()
+-    picam2.start_preview(Preview.QTGL)
++    picam2.start_preview(Preview.QT)
+ 
+     stream_format = "YUV420"
+-    if Picamera2.platform == Platform.PISP:
+-        stream_format = "RGB888"
+ 
+     config = picam2.create_preview_configuration(main={"size": normalSize},
+                                                  lores={"size": lowresSize, "format": stream_format})

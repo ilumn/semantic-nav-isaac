@@ -1,0 +1,3 @@
+# Canonical external ROS/perception runtime for the NVIDIA Isaac Sim port.
+# ROS 2 Jazzy itself is provided by /opt/ros/jazzy, not by pip.
+-r dev/isaac_sim/requirements-runtime.txt

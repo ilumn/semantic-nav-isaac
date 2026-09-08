@@ -1,0 +1,14 @@
+std_msgs/Header header
+string entity_id
+string semantic_name
+string detector_label
+string place_id
+string state
+string[] aliases
+string[] provenance
+geometry_msgs/Pose pose
+float64[36] pose_covariance
+geometry_msgs/Vector3 extent
+float32 confidence
+uint32 observation_count
+builtin_interfaces/Time last_seen

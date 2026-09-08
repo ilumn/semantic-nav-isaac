@@ -1,0 +1,39 @@
+# ============================================================
+# tb3_semantic_refiner — semantic_refiner_node configuration
+# ============================================================
+
+semantic_refiner_node:
+  ros__parameters:
+    image_topic: "/camera/image_raw"
+    camera_info_topic: "/camera/camera_info"
+    map_topic: "/map"
+    status_topic: "/semantic_map/refiner_status"
+    output_markers_topic: "/semantic_map/colmap_markers"
+    output_state_topic: "/semantic_map/refined_state"
+    output_pointcloud_topic: "/semantic_map/colmap_points"
+    output_support_pointcloud_topic: "/semantic_map/colmap_support_points"
+    target_frame: "map"
+    robot_base_frame: "base_link"
+    bundle_root: "/tmp/tb3_semantic_refiner_jobs"
+    max_completed_jobs: 5
+    max_buffered_frames: 180
+    frame_sample_interval_sec: 0.35
+    frame_sample_min_translation_m: 0.05
+    frame_sample_min_yaw_rad: 0.08
+    worker_enabled: true
+    auto_run_when_buffer_ready: true
+    min_buffered_frames_for_job: 28
+    min_pose_frames_for_job: 18
+    min_bundle_translation_span_m: 0.75
+    min_bundle_path_length_m: 1.5
+    min_new_frames_for_job: 14
+    worker_timeout_sec: 300.0
+    worker_python_executable: "python3"
+    worker_max_keyframes: 128
+    worker_max_image_size: 1440
+    worker_yolo_model_size: ""
+    worker_yolo_model_name: ""
+    worker_yolo_confidence: 0.18
+    worker_prompt_preset: ""
+    worker_scene_profile: "general"
+    worker_prompt_vocabulary: []

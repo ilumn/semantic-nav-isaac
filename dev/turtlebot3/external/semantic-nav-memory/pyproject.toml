@@ -1,0 +1,28 @@
+[project]
+name = "semantic-nav-memory"
+version = "0.1.0"
+description = "Standalone monocular semantic mapping pipeline with a browser demo."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.135.3",
+  "pycolmap>=4.0.2",
+  "python-multipart>=0.0.22",
+  "pyyaml>=6.0.3",
+  "ultralytics>=8.4.33",
+  "uvicorn>=0.42.0",
+]
+
+[project.scripts]
+semantic-nav-memory = "semantic_nav_memory.server:main"
+semantic-nav-memory-worker = "semantic_nav_memory.cli:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["semantic_nav_memory"]
+
+[tool.setuptools.package-data]
+semantic_nav_memory = ["*.yaml"]

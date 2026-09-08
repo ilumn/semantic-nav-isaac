@@ -1,0 +1,32 @@
+# explore_lite parameters for TurtleBot3 (ROS2 Humble)
+# Load this file in your launch (e.g. parameters=[this_file, {"use_sim_time": use_sim_time}])
+
+/**:
+  ros__parameters:
+    # --- Frame and topics (TurtleBot3) ---
+    robot_base_frame: base_link          # TF frame of the robot base (TurtleBot3 standard)
+    costmap_topic: map                   # OccupancyGrid: use "map" for SLAM; use "/global_costmap/costmap" if using Nav2 costmap
+    costmap_updates_topic: map_updates  # Optional partial updates; leave as-is if no publisher (e.g. slam_toolbox only publishes /map)
+
+    # --- Exploration behavior ---
+    planner_frequency: 0.15              # Hz; how often to compute next frontier goal (lower = less CPU, slower reaction)
+    progress_timeout: 30.0               # Seconds without progress before current goal is abandoned and a new frontier is chosen
+    return_to_init: false                # If true, return to initial pose when exploration is finished
+    min_frontier_size: 0.75              # Minimum frontier cluster size (meters); filters tiny/noisy frontiers
+
+    # --- Goal selection tuning (frontier cost) ---
+    potential_scale: 3.0                 # Weight for distance to frontier (higher = prefer closer frontiers)
+    orientation_scale: 0.0               # Weight for robot orientation vs frontier (0 = ignore orientation)
+    gain_scale: 1.0                      # Weight for frontier size / information gain
+
+    # --- TF and visualization ---
+    transform_tolerance: 0.3             # Max age (s) of TF for robot pose; increase if TF is slow or delayed
+    visualize: true                      # Publish visualization markers for frontiers (e.g. in RViz)
+
+# use_sim_time: set at launch (true for Isaac Sim, false for real robot).
+#
+# --- When to switch costmap_topic ---
+# Use costmap_topic: map when:
+#   - You run SLAM only (e.g. slam_toolbox) and want frontiers from the raw map; set costmap_updates_topic: map_updates (optional; many SLAM nodes do not publish it).
+# Use costmap_topic: /global_costmap/costmap when:
+#   - You run Nav2 and want frontiers to respect inflated obstacles (fewer goals in narrow or padded areas). Then set costmap_updates_topic: /global_costmap/costmap_updates.

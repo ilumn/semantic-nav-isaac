@@ -1,0 +1,27 @@
+# ============================================================
+# tb3_query — semantic_query_node configuration
+# ============================================================
+# Stage-4 semantic query: resolve text commands against semantic
+# memory to select a navigation target.
+#
+# See semantic_targets.yaml for the canonical name mapping
+# (semantic_name <-> detector_label <-> isaac_asset).
+
+semantic_query_node:
+  ros__parameters:
+    # ── Topics ────────────────────────────────────────────
+    memory_mode: "semantic_map_state"   # "detection3d" | "semantic_map_state"
+    memory_topic:  "/semantic_map_memory_node/landmark_objects"  # persistent landmarks in map frame fallback
+    semantic_map_topic: "/semantic_map/state"
+    command_topic: "~/command"        # -> /semantic_query_node/command
+    output_topic:  "~/selected_target"  # -> /semantic_query_node/selected_target
+    status_topic:  "~/query_status"     # -> /semantic_query_node/query_status
+    robot_base_frame: "base_link"
+
+    # ── Mapping ───────────────────────────────────────────
+    # Path to semantic_targets.yaml. Empty = auto-resolve from
+    # tb3_frontier_exploration package share.
+    semantic_targets_file: ""
+
+    # ── Output ────────────────────────────────────────────
+    output_frame: "map"

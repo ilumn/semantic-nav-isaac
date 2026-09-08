@@ -1,0 +1,119 @@
+default_preset: general
+
+presets:
+  general:
+    label: General Mixed
+    scene_profile: general
+    description: Balanced indoor and outdoor vocabulary for unknown footage.
+    prompts:
+      - person
+      - chair
+      - desk
+      - table
+      - door
+      - monitor
+      - keyboard
+      - cabinet
+      - plant
+      - sofa
+      - bed
+      - trash can
+      - backpack
+      - bottle
+      - cup
+      - car
+      - truck
+      - bicycle
+      - motorcycle
+      - building
+      - house
+      - roof
+      - tree
+      - bush
+      - road
+      - driveway
+      - sidewalk
+      - fence
+      - garage
+      - mailbox
+      - utility pole
+      - lawn
+      - pool
+
+  indoor:
+    label: Indoor Workspace
+    scene_profile: indoor
+    description: Furniture, work objects, and room landmarks for interior navigation.
+    prompts:
+      - person
+      - chair
+      - desk
+      - table
+      - door
+      - monitor
+      - keyboard
+      - cup
+      - bottle
+      - backpack
+      - cabinet
+      - plant
+      - trash can
+      - sofa
+      - bed
+
+  outdoor:
+    label: Outdoor Neighborhood
+    scene_profile: outdoor
+    description: Residential street vocabulary for ground-level exterior footage.
+    prompts:
+      - person
+      - car
+      - truck
+      - bicycle
+      - motorcycle
+      - building
+      - house
+      - roof
+      - tree
+      - bush
+      - road
+      - driveway
+      - sidewalk
+      - fence
+      - garage
+      - mailbox
+      - utility pole
+      - lawn
+      - pool
+
+  aerial:
+    label: Aerial Survey
+    scene_profile: aerial
+    description: Small-object neighborhood and street prompts for drone or elevated views.
+    prompts:
+      - car
+      - truck
+      - bicycle
+      - motorcycle
+      - building
+      - house
+      - roof
+      - tree
+      - bush
+      - road
+      - driveway
+      - sidewalk
+      - fence
+      - garage
+      - mailbox
+      - utility pole
+      - lawn
+      - pool
+      - backyard
+      - street
+
+  custom:
+    label: Custom Only
+    scene_profile: general
+    description: Use only the prompts you provide manually.
+    prompts: []

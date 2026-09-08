@@ -1,0 +1,16 @@
+# External ROS semantic-stack runtime, validated on this dual-RTX-5090 host.
+# ROS itself remains supplied by Ubuntu's /usr/bin/python3 and /opt/ros/jazzy.
+numpy==1.26.4
+opencv-python==4.8.1.78
+pydantic==2.13.2
+pycolmap==4.0.3
+pyyaml==6.0.3
+torch==2.11.0
+torchvision==0.26.0
+ultralytics==8.4.38
+ultralytics-thop==2.0.18
+clip==1.0
+ftfy==6.3.1
+regex==2026.7.19
+tqdm==4.70.0
+wcwidth==0.8.2

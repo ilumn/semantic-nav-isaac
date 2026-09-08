@@ -1,0 +1,40 @@
+# Real robot profile for TurtleBot3 Waffle Pi semantic navigation.
+#
+# Precondition: official TurtleBot3 bringup is already running and provides
+# base robot topics, TF, LDS scan, odometry, and the RGB camera stream.
+
+profile:
+  name: waffle_pi_real
+  robot_model: waffle_pi
+  use_sim_time: false
+  requires_external_base_bringup: true
+  motion_requires_operator_arm: true
+  nav2_params_file: config/nav2/waffle_pi_real_nav2.yaml
+  slam_params_file: config/slam/waffle_pi_real_slam.yaml
+  readiness_required: true
+
+topics:
+  map: /map
+  costmap: /global_costmap/costmap
+  odom: /odom
+  scan: /scan
+  image: /camera/image_raw
+  camera_info: /camera/camera_info
+
+frames:
+  map: map
+  odom: odom
+  base: base_link
+  camera: camera_rgb_frame
+
+perception:
+  detector_device: cpu
+  camera_hfov_deg: 62.2
+  camera_base_tx: 0.0
+  camera_base_ty: 0.0
+  camera_base_yaw_deg: 0.0
+
+refiner:
+  worker_enabled: true
+  auto_run_when_buffer_ready: true
+  required_for_navigation: false

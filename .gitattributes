@@ -1,0 +1,24 @@
+* text=auto eol=lf
+
+*.sh text eol=lf
+*.py text eol=lf
+*.md text eol=lf whitespace=-trailing-space
+*.patch text eol=lf whitespace=-trailing-space
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.xml text eol=lf
+*.sdf text eol=lf
+*.urdf text eol=lf
+*.xacro text eol=lf
+*.dae text eol=lf
+*.usd text eol=lf
+*.usda text eol=lf
+
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.pdf binary
+*.pptx binary
+*.whl binary
+*.mp4 binary

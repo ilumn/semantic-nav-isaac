@@ -1,0 +1,54 @@
+# ============================================================
+# semantic_targets.yaml — Canonical semantic object registry
+# ============================================================
+#
+# Single source of truth for the three naming layers used in this project:
+#
+#   semantic_name    Human-facing label. Used by the supported semantic
+#                    query stack. This is what a user says:
+#                    "go to the table".
+#
+#   detector_label   YOLO / COCO class string. Used in detector.yaml
+#                    class_filter. This is what YOLOv8 outputs.
+#                    NEVER confuse with semantic_name — they may differ
+#                    (e.g. semantic "table" ↔ YOLO "bench").
+#
+#   isaac_asset      Stable asset key used by the Isaac scene manifest.
+#                    This is a simulation-only field; semantic nodes ignore it.
+#
+# Baseline status: these labels were validated with YOLOv8n in the previous
+# simulator. The Isaac rendered-sensor acceptance run must revalidate them.
+#
+# To disable an object without deleting it: set enabled: false.
+# Runtime query and semantic-map components read only enabled entries.
+# ============================================================
+
+semantic_targets:
+
+  - semantic_name:   "table"
+    detector_label:  "bench"
+    isaac_asset:     "table_marble"
+    enabled:         true
+    notes: >
+      YOLOv8 classifies the marble/wooden table as "bench" (COCO class 13).
+      The semantic_name is "table" for natural command phrasing.
+      Do NOT use "dining table" (COCO class 60) — not detected reliably
+      for this model in simulation.
+
+  - semantic_name:   "stop_sign"
+    detector_label:  "stop sign"
+    isaac_asset:     "stop_sign"
+    enabled:         false  # temporarily disabled for 2-target testing
+    notes: >
+      semantic_name uses underscore form "stop_sign" for consistency.
+      detector_label remains "stop sign" (COCO label with space).
+      Replaces old "traffic light" / "stop_light" (broken materials).
+      The Isaac scene keeps this target optional for the two-target baseline.
+
+  - semantic_name:   "person"
+    detector_label:  "person"
+    isaac_asset:     "person_standing"
+    enabled:         true
+    notes: >
+      Direct label match. Highest detection confidence of the three targets.
+      Optimise scene layout to place person centred in camera FOV first.
