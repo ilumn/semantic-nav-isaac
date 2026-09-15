@@ -7,27 +7,23 @@
 detector_node:
   ros__parameters:
     # ── Model ──────────────────────────────────────────────
-    # IMPORTANT: set this to the actual path of your downloaded weights.
-    # Relative paths are resolved from <pkg_share>/models/.
-    # See README → STOP HERE checkpoint.
-    model_path: "yolov8n.pt"          # <- filename inside models/ folder
+    model_id: "nvidia/LocateAnything-3B"
+    model_revision: "c32291ca5e996f5a7a485845b4f57a233936bba0"
+    local_files_only: true             # fetch explicitly before launch
 
     # ── Inference ──────────────────────────────────────────
-    conf_threshold: 0.12              # lowered from 0.15 for bench edge cases
-    device: "cpu"                     # "cpu" | "cuda:0"
-    enable_tracking: false            # true = ByteTrack; track_id populated
+    device: "cuda:0"
+    generation_mode: "hybrid"
+    max_new_tokens: 2048
 
     # ── Class filter ───────────────────────────────────────
-    # List COCO detector_label values from semantic_targets.yaml (validated in sim).
+    # Open-vocabulary detector_label values from semantic_targets.yaml.
     # IMPORTANT: use detector_label strings, not semantic_name or simulator asset keys.
-    # IMPORTANT: do NOT use bare [] — rclpy Humble cannot infer type from an empty
-    #            YAML list and will crash. Use [""] to accept ALL classes.
-    #
     #   semantic  →  detector_label  (see config/semantic_targets.yaml)
     #   table     →  "bench"
     #   stop_sign →  "stop sign"
     #   person    →  "person"
-    class_filter: ["bench", "person"]  # "stop sign" temporarily removed — restore for full 3-target testing
+    class_filter: ["bench", "person", "stop sign"]
 
     # ── Topics ─────────────────────────────────────────────
     image_topic:        "/camera/image_raw"
@@ -37,4 +33,4 @@ detector_node:
 
     # ── Debug ──────────────────────────────────────────────
     publish_debug_image: true
-    queue_size: 5
+    queue_size: 1

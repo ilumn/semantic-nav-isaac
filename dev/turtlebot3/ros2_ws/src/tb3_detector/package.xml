@@ -5,7 +5,7 @@
   <name>tb3_detector</name>
   <version>0.1.0</version>
   <description>
-    Stage-1 perception: run YOLOv8 object detection on the TurtleBot3 camera image
+    Stage-1 perception: run Locate Anything detection on the TurtleBot3 camera image
     and publish DetectionArray results for downstream localizer / semantic navigation.
   </description>
   <maintainer email="user@todo.todo">Your Name</maintainer>
@@ -24,7 +24,7 @@
   <depend>cv_bridge</depend>
 
   <!-- Python dependencies (installed via pip, listed here for documentation) -->
-  <!-- pip install ultralytics opencv-python-headless torch torchvision -->
+  <!-- Python dependencies are pinned in dev/isaac_sim/requirements-runtime.txt -->
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

@@ -8,16 +8,17 @@
 #                    query stack. This is what a user says:
 #                    "go to the table".
 #
-#   detector_label   YOLO / COCO class string. Used in detector.yaml
-#                    class_filter. This is what YOLOv8 outputs.
+#   detector_label   Locate Anything query label. Used in detector.yaml
+#                    class_filter and returned with matching boxes.
 #                    NEVER confuse with semantic_name — they may differ
-#                    (e.g. semantic "table" ↔ YOLO "bench").
+#                    (e.g. semantic "table" ↔ detector label "bench").
 #
 #   isaac_asset      Stable asset key used by the Isaac scene manifest.
 #                    This is a simulation-only field; semantic nodes ignore it.
 #
-# Baseline status: these labels were validated with YOLOv8n in the previous
-# simulator. The Isaac rendered-sensor acceptance run must revalidate them.
+# Baseline status: these labels are the configured Locate Anything prompts.
+# The current Isaac acceptance run validated "person"; each changed scene or
+# enabled target still needs rendered-sensor validation.
 #
 # To disable an object without deleting it: set enabled: false.
 # Runtime query and semantic-map components read only enabled entries.
@@ -30,10 +31,8 @@ semantic_targets:
     isaac_asset:     "table_marble"
     enabled:         true
     notes: >
-      YOLOv8 classifies the marble/wooden table as "bench" (COCO class 13).
+      Locate Anything is prompted with "bench" for the marble/wooden table.
       The semantic_name is "table" for natural command phrasing.
-      Do NOT use "dining table" (COCO class 60) — not detected reliably
-      for this model in simulation.
 
   - semantic_name:   "stop_sign"
     detector_label:  "stop sign"

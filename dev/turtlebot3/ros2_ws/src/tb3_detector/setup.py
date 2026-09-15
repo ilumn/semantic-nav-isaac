@@ -23,7 +23,7 @@ setup(
     zip_safe=True,
     maintainer="Your Name",
     maintainer_email="user@todo.todo",
-    description="Stage-1 perception: YOLOv8 detector node for TB3 semantic navigation.",
+    description="Stage-1 Locate Anything perception for TB3 semantic navigation.",
     license="Apache-2.0",
     tests_require=["pytest"],
     entry_points={

@@ -58,13 +58,17 @@ class SemanticMapNode(Node):
         self.declare_parameter("target_frame", "map")
         self.declare_parameter("robot_base_frame", "base_link")
         self.declare_parameter("camera_frame", "")
-        self.declare_parameter("detector_backend", "yolov8")
-        self.declare_parameter("model_path", "yolov8n.pt")
-        self.declare_parameter("device", "cpu")
-        self.declare_parameter("enable_tracking", False)
+        self.declare_parameter("detector_backend", "locate_anything")
+        self.declare_parameter("model_id", "nvidia/LocateAnything-3B")
+        self.declare_parameter(
+            "model_revision", "c32291ca5e996f5a7a485845b4f57a233936bba0"
+        )
+        self.declare_parameter("device", "cuda:0")
+        self.declare_parameter("generation_mode", "hybrid")
+        self.declare_parameter("max_new_tokens", 2048)
+        self.declare_parameter("local_files_only", True)
         self.declare_parameter("class_filter", ["__from_targets__"])
         self.declare_parameter("frame_sample_interval_sec", 0.5)
-        self.declare_parameter("detector_confidence_threshold", 0.15)
         self.declare_parameter("publish_debug_image", True)
         self.declare_parameter("camera_hfov_deg", 62.2)
         self.declare_parameter("camera_base_tx", 0.0)
@@ -102,11 +106,13 @@ class SemanticMapNode(Node):
         self._target_frame = self.get_parameter("target_frame").value
         self._robot_base_frame = self.get_parameter("robot_base_frame").value
         self._detector_backend = self.get_parameter("detector_backend").value
-        model_path = self.get_parameter("model_path").value
+        model_id = self.get_parameter("model_id").value
+        model_revision = self.get_parameter("model_revision").value
         device = self.get_parameter("device").value
-        enable_tracking = bool(self.get_parameter("enable_tracking").value)
+        generation_mode = self.get_parameter("generation_mode").value
+        max_new_tokens = int(self.get_parameter("max_new_tokens").value)
+        local_files_only = bool(self.get_parameter("local_files_only").value)
         configured_class_filter = [item for item in self.get_parameter("class_filter").value if item]
-        self._detector_conf = float(self.get_parameter("detector_confidence_threshold").value)
         self._publish_debug_image = bool(self.get_parameter("publish_debug_image").value)
         camera_hfov_deg = float(self.get_parameter("camera_hfov_deg").value)
         camera_base_tx = float(self.get_parameter("camera_base_tx").value)
@@ -173,11 +179,13 @@ class SemanticMapNode(Node):
         self._marker_builder = MarkerBuilder(sphere_radius=sphere_radius, text_offset_z=text_offset_z)
         self._bridge = CvBridge()
         self._detector = DetectorBridge(
-            model_path=model_path,
-            conf_threshold=self._detector_conf,
+            model_id=model_id,
+            model_revision=model_revision,
             class_filter=self._class_filter or None,
             device=device,
-            enable_tracking=enable_tracking,
+            generation_mode=generation_mode,
+            max_new_tokens=max_new_tokens,
+            local_files_only=local_files_only,
         )
         self._detector.load()
 
@@ -216,12 +224,11 @@ class SemanticMapNode(Node):
 
         self.get_logger().info(
             "SemanticMapNode ready  detector=%s  frame=%s  sample_interval=%.2fs  "
-            "detector_conf=%.2f  match_distance=%.2fm"
+            "match_distance=%.2fm"
             % (
                 self._detector_backend,
                 self._target_frame,
                 sample_interval,
-                self._detector_conf,
                 self._match_distance,
             )
         )

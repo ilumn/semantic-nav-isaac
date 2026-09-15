@@ -4,7 +4,7 @@ This repository runs the existing ROS 2 semantic-navigation stack against
 NVIDIA Isaac Sim instead of Gazebo. Isaac owns physics, the Waffle Pi robot,
 RGB camera, 2D LiDAR, odometry, joint state, simulation time, and velocity
 control. ROS 2 Jazzy continues to own SLAM Toolbox, Nav2, frontier exploration,
-YOLO perception, semantic memory/query, and RViz.
+Locate Anything perception, semantic memory/query, and RViz.
 
 The port targets **Isaac Sim 6.0.1**, **Ubuntu 24.04**, and **ROS 2 Jazzy**.
 The `tb3_*` ROS package names are retained deliberately so the tested semantic
@@ -87,7 +87,7 @@ dev/isaac_sim/                         Isaac scene and operator scripts
 dev/turtlebot3/ros2_ws/src/
   isaac_semantic_nav/                  Isaac ROS bringup and contract checker
   tb3_coordinator/                     Shared stack orchestration
-  tb3_detector/                        YOLO RGB detector
+  tb3_detector/                        Locate Anything RGB detector
   tb3_localizer/                       Camera/LiDAR fusion
   tb3_frontier_exploration/            Frontier selection and goal assignment
   tb3_semantic_* and tb3_query/         Semantic state, memory, query, refinement

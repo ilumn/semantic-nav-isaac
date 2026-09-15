@@ -12,7 +12,7 @@ Prepare this stack for a real TurtleBot3 Waffle Pi-class robot with:
 - ROS 2 Jazzy on Ubuntu 24.04
 - Stock TurtleBot3 base bringup and LDS
 - RGB camera publishing `/camera/image_raw` and `/camera/camera_info`
-- Upgraded onboard compute capable of running Nav2, YOLOv8, and best-effort COLMAP refinement
+- Upgraded onboard compute capable of running Nav2, Locate Anything, and best-effort COLMAP refinement
 - Explicit operator arming before autonomous motion
 
 The real robot should run the full stack onboard: SLAM, Nav2, frontier exploration, detector, localizer, semantic memory, native semantic map, semantic query, navigation adapter, coordinator, and semantic refiner.

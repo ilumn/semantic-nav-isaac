@@ -53,8 +53,8 @@ if isaac_add_semantic_pythonpath; then
 fi
 semantic_runtime_report="$(isaac_probe_semantic_runtime || true)"
 [[ -n "${semantic_runtime_report}" && "${semantic_runtime_report}" == *"cuda=True"* && "${semantic_runtime_report}" == *"pins=True"* && "${semantic_runtime_report}" == *"ros_imports=True"* && "${semantic_runtime_report}" == *"worker_import=True"* ]] || isaac_die \
-  "Pinned CUDA detector/refiner dependencies are unavailable. Run ./bootstrap_runtime.sh --check."
-isaac_pass "GPU detector runtime: ${semantic_runtime_report}"
+  "Pinned CUDA perception/refiner dependencies are unavailable. Run ./bootstrap_runtime.sh --check."
+isaac_pass "GPU perception runtime: ${semantic_runtime_report}"
 isaac_verify_port_assets || isaac_die \
   "A required model or vendored runtime wheel is missing or has the wrong SHA-256 digest. Run ./fetch_models.sh --check and ./preflight.sh for details."
 

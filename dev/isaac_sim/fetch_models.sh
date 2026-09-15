@@ -42,7 +42,6 @@ if [[ "${force}" == true && "${mode}" != download ]]; then
 fi
 
 declare -a model_specs=(
-  "YOLOv8n|${ISAAC_LIVE_MODEL}|${ISAAC_LIVE_MODEL_SHA256}|https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8n.pt"
   "YOLOv8s-World-v2|${ISAAC_REFINER_MODEL}|${ISAAC_REFINER_MODEL_SHA256}|https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8s-worldv2.pt"
   "CLIP ViT-B/32|${ISAAC_CLIP_MODEL}|${ISAAC_CLIP_MODEL_SHA256}|https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt"
 )
@@ -93,6 +92,35 @@ for spec in "${model_specs[@]}"; do
   mv -f -- "${temp_file}" "${target}"
   isaac_pass "${label}: installed ${target}"
 done
+
+if ! isaac_add_semantic_pythonpath; then
+  isaac_fail "Runtime venv is unavailable; run ${SCRIPT_DIR}/bootstrap_runtime.sh first"
+  status=1
+elif [[ "${mode}" == download ]]; then
+  isaac_info "Downloading LocateAnything-3B revision ${ISAAC_LIVE_MODEL_REVISION}"
+  if ! /usr/bin/python3 - "${ISAAC_LIVE_MODEL_ID}" "${ISAAC_LIVE_MODEL_REVISION}" <<'PY'
+import sys
+from huggingface_hub import snapshot_download
+
+path = snapshot_download(repo_id=sys.argv[1], revision=sys.argv[2])
+print(path)
+PY
+  then
+    isaac_fail "LocateAnything-3B download failed"
+    status=1
+  fi
+elif ! /usr/bin/python3 - "${ISAAC_LIVE_MODEL_ID}" "${ISAAC_LIVE_MODEL_REVISION}" <<'PY' >/dev/null 2>&1
+import sys
+from huggingface_hub import snapshot_download
+
+snapshot_download(repo_id=sys.argv[1], revision=sys.argv[2], local_files_only=True)
+PY
+then
+  isaac_fail "LocateAnything-3B revision ${ISAAC_LIVE_MODEL_REVISION} is missing from the Hugging Face cache"
+  status=1
+else
+  isaac_pass "LocateAnything-3B revision ${ISAAC_LIVE_MODEL_REVISION}"
+fi
 
 if ((status != 0)); then
   if [[ "${mode}" == check ]]; then

@@ -245,7 +245,7 @@ class SemanticRuntimeDebugNode(Node):
         if bench_det > 0 and bench_loc == 0:
             lines.append("  WARNING bench detected but NEVER localized (LiDAR association fail?)")
         elif bench_det == 0:
-            lines.append("  WARNING bench NEVER detected by YOLO so far")
+            lines.append("  WARNING bench NEVER detected by Locate Anything so far")
 
         self.get_logger().info("\n".join(lines))
 

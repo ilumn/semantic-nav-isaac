@@ -1,43 +1,29 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
 from tb3_detector.detector_core import DetectorCore
 
 
-def resolve_model_path(model_path_raw: str) -> str:
-    path = Path(model_path_raw)
-    if path.is_absolute():
-        return str(path)
-    detector_pkg_dir = Path(__file__).resolve().parents[2] / "tb3_detector"
-    candidate = detector_pkg_dir / "models" / model_path_raw
-    if candidate.exists():
-        return str(candidate)
-    repo_root = Path(__file__).resolve().parents[6]
-    repo_candidate = repo_root / model_path_raw
-    if repo_candidate.exists():
-        return str(repo_candidate)
-    return str(path)
-
-
 class DetectorBridge:
-    """Thin wrapper that reuses the existing YOLOv8 detector core."""
+    """Thin wrapper that reuses the Locate Anything detector core."""
 
     def __init__(
         self,
-        model_path: str,
-        conf_threshold: float,
+        model_id: str,
+        model_revision: str,
         class_filter: list[str] | None,
         device: str,
-        enable_tracking: bool,
+        generation_mode: str,
+        max_new_tokens: int,
+        local_files_only: bool,
     ) -> None:
         self._core = DetectorCore(
-            model_path=resolve_model_path(model_path),
-            conf_threshold=conf_threshold,
+            model_id=model_id,
+            model_revision=model_revision,
             class_filter=class_filter,
             device=device,
-            enable_tracking=enable_tracking,
+            generation_mode=generation_mode,
+            max_new_tokens=max_new_tokens,
+            local_files_only=local_files_only,
         )
 
     def load(self) -> None:

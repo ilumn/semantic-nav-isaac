@@ -1,33 +1,22 @@
-# tb3_detector/models
+# tb3_detector model cache
 
-Place YOLOv8 weight files here.
+The primary detector uses `nvidia/LocateAnything-3B` from the standard Hugging
+Face cache. Model weights are not stored in this directory or committed to Git.
 
-## Required for the Isaac runtime
-
-| Filename       | Download source |
-|----------------|-----------------|
-| `yolov8n.pt`   | Ultralytics v8.2.0 release asset |
-
-From the repository root, download and verify the validated weight with:
+From the repository root, install the pinned runtime and fetch the immutable
+model revision:
 
 ```bash
+dev/isaac_sim/bootstrap_runtime.sh --allow-download
 dev/isaac_sim/fetch_models.sh --download
 ```
 
-The expected digest is:
+`fetch_models.sh --check` verifies that the full pinned snapshot can be resolved
+without network access. The configured revision is:
 
 ```text
-SHA-256  f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36
+c32291ca5e996f5a7a485845b4f57a233936bba0
 ```
 
-## Naming convention
-
-- `yolov8n.pt`           — official nano weights (COCO-80)
-- `yolov8s.pt`           — official small weights (COCO-80)
-- `yolov8n_tb3_lab.pt`   — custom fine-tuned on your lab scene (future)
-
-## .gitignore
-
-All weight files are excluded from version control because they are large
-binaries. Use the repository downloader, Git LFS, or a model registry for
-additional shared weights.
+The model is distributed under the NVIDIA License for research and evaluation
+use only. See `THIRD_PARTY_NOTICES.md`.

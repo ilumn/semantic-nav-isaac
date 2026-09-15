@@ -42,7 +42,7 @@ It works like this:
 
 1. `tb3_detector`
    - subscribes to `/camera/image_raw`
-   - runs YOLOv8 closed-set detection
+   - runs Locate Anything open-vocabulary detection
    - publishes `vision_msgs/Detection2DArray`
 
 2. `tb3_localizer`

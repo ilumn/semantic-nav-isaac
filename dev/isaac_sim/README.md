@@ -38,8 +38,8 @@ From this directory:
 cp .env.example .env
 # Edit ISAAC_SIM_ROOT in .env to point at the native 6.0.1 installation.
 
-./fetch_models.sh --download
 ./bootstrap_runtime.sh --allow-download
+./fetch_models.sh --download
 python3 scene/tools/convert_semantic_assets.py --execute
 ./build_ros.sh
 ```
@@ -57,6 +57,15 @@ pydantic==2.13.2
 pyyaml==6.0.3
 torch==2.11.0
 torchvision==0.26.0
+transformers==4.57.1
+tokenizers==0.22.0
+accelerate==1.5.2
+timm==1.0.22
+peft==0.12.0
+decord==0.6.0
+lmdb==1.7.5
+Pillow==11.1.0
+huggingface-hub==0.36.0
 ultralytics==8.4.38
 ultralytics-thop==2.0.18
 pycolmap==4.0.3
@@ -68,10 +77,10 @@ wcwidth==0.8.2
 ```
 
 Model checkpoints are not committed to Git. `fetch_models.sh --download`
-retrieves the exact validated YOLOv8n, YOLOv8s-World-v2, and CLIP ViT-B/32 files
-from pinned upstream URLs and accepts them only when their SHA-256 digests
-match. `fetch_models.sh --check` is network-free. Preflight performs the same
-digest validation before launch.
+retrieves the pinned LocateAnything-3B Hugging Face revision plus the exact
+YOLOv8s-World-v2 and CLIP ViT-B/32 refinement assets. File assets must match
+their SHA-256 digests. `fetch_models.sh --check` is network-free. Preflight
+performs the same validation before launch.
 
 The `clip==1.0` package is supplied by
 `vendor/clip-1.0-py3-none-any.whl`, built from OpenAI CLIP commit
@@ -83,8 +92,8 @@ The port does not install Python packages by default. Before launching the
 detector, create a `.venv` at the sibling repository root with the GPU runtime
 dependencies for this host, or point `ISAAC_SEMANTIC_VENV` at an equivalent
 Python 3.12 venv.
-Preflight checks that `/usr/bin/python3` can import both `torch` and
-`ultralytics` plus the refiner dependencies, verifies the exact pinned versions,
+Preflight checks that `/usr/bin/python3` can import the Locate Anything and
+refiner dependencies, verifies the exact pinned versions,
 imports Jazzy's `rclpy` and `cv_bridge` against NumPy 1.26.4, and confirms that
 Torch sees at least one CUDA device. NumPy 2.x is intentionally excluded because
 it is ABI-incompatible with the installed Jazzy `cv_bridge`. A portable venv
