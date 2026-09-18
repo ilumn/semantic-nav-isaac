@@ -75,8 +75,8 @@ This checklist is intended to be implementation-complete. If every item here is 
 ## 4. Detection integration
 
 - [x] Choose the first detector backend for the live semantic map
-- [x] Reuse current YOLOv8 stack where practical for the first milestone
-- [x] Ensure detector output preserves detector label and confidence
+- [x] Reuse the shared Locate Anything detector core in both perception paths
+- [x] Preserve detector labels and document the fixed score convention
 - [x] Add optional class filtering from config
 - [x] Add optional debug image publication
 - [x] Add detector wrapper module with no ROS dependency where possible

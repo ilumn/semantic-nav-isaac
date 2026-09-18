@@ -14,8 +14,8 @@ ISAAC_DEFAULT_SCENE_SCRIPT="${ISAAC_TOOL_DIR}/scene/run_semantic_nav.py"
 ISAAC_DEFAULT_STAGE_PATH="${ISAAC_TOOL_DIR}/generated/semantic_nav.usd"
 ISAAC_EXPECTED_VERSION="${ISAAC_SIM_VERSION_EXPECTED:-6.0.1}"
 ISAAC_RUNTIME_DIR="${ISAAC_RUNTIME_DIR:-${ISAAC_TOOL_DIR}/.runtime}"
-ISAAC_LIVE_MODEL="${ISAAC_PORT_ROOT}/dev/turtlebot3/ros2_ws/src/tb3_detector/models/yolov8n.pt"
-ISAAC_LIVE_MODEL_SHA256="f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36"
+ISAAC_LIVE_MODEL_ID="nvidia/LocateAnything-3B"
+ISAAC_LIVE_MODEL_REVISION="c32291ca5e996f5a7a485845b4f57a233936bba0"
 ISAAC_REFINER_MODEL="${ISAAC_PORT_ROOT}/dev/turtlebot3/external/semantic-nav-memory/assets/models/yolov8s-worldv2.pt"
 ISAAC_REFINER_MODEL_SHA256="9b2c17ab6124a913e9b3a5c170617920d91b0f01111a8479da69f00e2cf27792"
 ISAAC_CLIP_MODEL="${ISAAC_PORT_ROOT}/dev/turtlebot3/external/semantic-nav-memory/assets/models/ViT-B-32.pt"
@@ -274,6 +274,15 @@ import yaml
 import rclpy
 import torch
 import torchvision
+import transformers
+import tokenizers
+import accelerate
+import timm
+import peft
+import decord
+import lmdb
+import PIL
+import huggingface_hub
 import ultralytics
 from cv_bridge import CvBridge
 from semantic_nav_memory import cli as semantic_worker_cli
@@ -283,6 +292,15 @@ expected = {
     "torchvision": "0.26.0",
     "ultralytics": "8.4.38",
     "ultralytics-thop": "2.0.18",
+    "transformers": "4.57.1",
+    "tokenizers": "0.22.0",
+    "accelerate": "1.5.2",
+    "timm": "1.0.22",
+    "peft": "0.12.0",
+    "decord": "0.6.0",
+    "lmdb": "1.7.5",
+    "Pillow": "11.1.0",
+    "huggingface-hub": "0.36.0",
     "pycolmap": "4.0.3",
     "opencv-python": "4.8.1.78",
     "numpy": "1.26.4",
@@ -318,11 +336,22 @@ isaac_verify_port_assets() {
     actual="$(sha256sum -- "${model}" | awk '{print $1}')"
     [[ "${actual}" == "${expected}" ]] || return 1
   done <<EOF
-${ISAAC_LIVE_MODEL}|${ISAAC_LIVE_MODEL_SHA256}
 ${ISAAC_REFINER_MODEL}|${ISAAC_REFINER_MODEL_SHA256}
 ${ISAAC_CLIP_MODEL}|${ISAAC_CLIP_MODEL_SHA256}
 ${ISAAC_CLIP_WHEEL}|${ISAAC_CLIP_WHEEL_SHA256}
 EOF
+
+  isaac_add_semantic_pythonpath || return 1
+  /usr/bin/python3 - "${ISAAC_LIVE_MODEL_ID}" "${ISAAC_LIVE_MODEL_REVISION}" <<'PY' >/dev/null 2>&1
+import sys
+from huggingface_hub import snapshot_download
+
+snapshot_download(
+    repo_id=sys.argv[1],
+    revision=sys.argv[2],
+    local_files_only=True,
+)
+PY
 }
 
 isaac_prepare_runtime_dir() {

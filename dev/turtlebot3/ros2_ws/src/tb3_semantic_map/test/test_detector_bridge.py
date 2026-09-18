@@ -27,11 +27,13 @@ def test_detector_bridge_proxies_load_and_infer(monkeypatch):
     monkeypatch.setattr(detector_bridge_module, "DetectorCore", _FakeDetectorCore)
 
     bridge = detector_bridge_module.DetectorBridge(
-        model_path="yolov8n.pt",
-        conf_threshold=0.25,
+        model_id="nvidia/LocateAnything-3B",
+        model_revision="test-revision",
         class_filter=["person"],
         device="cpu",
-        enable_tracking=False,
+        generation_mode="hybrid",
+        max_new_tokens=256,
+        local_files_only=True,
     )
 
     assert bridge.is_loaded is False
@@ -39,3 +41,4 @@ def test_detector_bridge_proxies_load_and_infer(monkeypatch):
     assert bridge.is_loaded is True
     detections = bridge.infer(object())
     assert detections[0]["label"] == "person"
+    assert bridge._core.kwargs["model_revision"] == "test-revision"

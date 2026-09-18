@@ -30,6 +30,15 @@ from OpenAI CLIP commit `d05afc436d78f1c48dc0dbf8e5980a9d471f35f6`.
 
 The complete MIT license is embedded in the wheel.
 
+## NVIDIA LocateAnything-3B
+
+The primary detector downloads `nvidia/LocateAnything-3B` from Hugging Face at
+the immutable revision `c32291ca5e996f5a7a485845b4f57a233936bba0`.
+
+- Source: <https://github.com/NVlabs/Eagle/tree/main/Embodied>
+- Model: <https://huggingface.co/nvidia/LocateAnything-3B>
+- License: NVIDIA License, research and evaluation use only
+
 ## Vendored semantic memory source
 
 `dev/turtlebot3/external/semantic-nav-memory/` records its source as
@@ -43,6 +52,6 @@ repository public. This notice does not grant additional rights.
 
 NVIDIA Isaac Sim, ROS packages, CUDA/NVIDIA drivers, and downloaded model
 checkpoints are not relicensed by this repository. Isaac Sim is installed
-separately. YOLO and CLIP checkpoints are downloaded locally by
+separately. Locate Anything, YOLO-World, and CLIP checkpoints are downloaded locally by
 `dev/isaac_sim/fetch_models.sh`, are excluded from Git, and remain subject to
 their upstream terms.

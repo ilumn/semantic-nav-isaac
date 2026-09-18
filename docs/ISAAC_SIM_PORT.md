@@ -26,7 +26,7 @@ Shared ROS stack
   robot_state_publisher: base_link -> sensors and wheel links
   SLAM Toolbox: map -> odom and /map
   Nav2 + frontier exploration: goals and /cmd_vel
-  YOLO + localizer + memory: live semantic observations
+  Locate Anything + localizer + memory: live semantic observations
   semantic query + adapter: text target -> NavigateToPose
   RViz: operator visualization
 ```
@@ -100,7 +100,7 @@ Checks that require Isaac Sim 6.0.1:
 4. `/odom` agrees with `odom -> base_footprint`;
 5. a plain `/cmd_vel` drives forward and turns with correct wheel order;
 6. SLAM Toolbox builds `/map` and Nav2 reaches a clicked goal;
-7. YOLO detects the rendered person/table targets;
+7. Locate Anything detects the rendered person/table targets;
 8. `/semantic_map/state` starts empty, fills from real observations, and a
    semantic command reaches `NavigateToPose`;
 9. GUI and headless modes both shut down cleanly through the scoped lifecycle

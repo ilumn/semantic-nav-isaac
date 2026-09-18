@@ -11,19 +11,17 @@ def generate_launch_description():
     # ── Launch arguments ────────────────────────────────────────────────
     # Only hardware/runtime parameters are controlled from launch:
     #
-    #   model_path   — resolved to an absolute install path here so the node
-    #                  does not have to guess where pkg_share lives at runtime.
+    #   model_id     — Hugging Face repository ID or local model directory.
     #   device       — useful to flip to "cuda:0" without editing the yaml.
     #   use_sim_time — must be set at launch time (clock source is external).
     #   image/camera_info topics — differ between sim and real robot bringup.
     #
-    # ALL other parameters (conf_threshold, class_filter, publish_debug_image,
-    # enable_tracking) come from detector.yaml.
+    # ALL other parameters come from detector.yaml.
     return LaunchDescription([
         DeclareLaunchArgument(
-            "model_path",
-            default_value=PathJoinSubstitution([pkg_share, "models", "yolov8n.pt"]),
-            description="Absolute path to YOLOv8 .pt weights.",
+            "model_id",
+            default_value="nvidia/LocateAnything-3B",
+            description="Hugging Face model ID or local Locate Anything snapshot.",
         ),
         DeclareLaunchArgument(
             "device",
@@ -59,7 +57,7 @@ def generate_launch_description():
                 PathJoinSubstitution([pkg_share, "config", "detector.yaml"]),
                 {
                     "use_sim_time": LaunchConfiguration("use_sim_time"),
-                    "model_path":   LaunchConfiguration("model_path"),
+                    "model_id":     LaunchConfiguration("model_id"),
                     "device":       LaunchConfiguration("device"),
                     "image_topic":  LaunchConfiguration("image_topic"),
                     "camera_info_topic": LaunchConfiguration("camera_info_topic"),

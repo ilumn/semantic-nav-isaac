@@ -11,7 +11,7 @@ simulation stack has already been validated with
   vendor-supported Jetson Orin host
 - Official TurtleBot3 bringup for base, LDS, odometry, TF, and robot state
 - RGB camera publishing `/camera/image_raw` and `/camera/camera_info`
-- Onboard compute capable of running Nav2, YOLOv8, and best-effort refiner jobs
+- Onboard compute capable of running Nav2, Locate Anything, and best-effort refiner jobs
 
 For Jetson Orin hardware installation, OS selection, power wiring, camera setup,
 and SSH handoff, start with

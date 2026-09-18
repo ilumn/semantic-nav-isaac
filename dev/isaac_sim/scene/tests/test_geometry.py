@@ -8,6 +8,7 @@ from semantic_nav_isaac_scene.geometry import (
     horizontal_focal_length_mm,
     pose_is_inside_xy,
     quaternion_to_matrix,
+    rotate_vector,
     rpy_to_quaternion,
     warehouse_interior_bounds,
 )
@@ -32,6 +33,20 @@ class GeometryTests(unittest.TestCase):
         for target in self.manifest["semantic_targets"]:
             if target["enabled"]:
                 self.assertTrue(pose_is_inside_xy(target["pose"]["xyz"], bounds, margin=0.1), target["id"])
+
+    def test_converted_semantic_assets_map_y_up_to_stage_z_up(self):
+        targets = {target["id"]: target for target in self.manifest["semantic_targets"]}
+        expected_rolls = {
+            "table": math.pi / 2.0,
+            "person": math.pi / 2.0 + 0.04,
+            "stop_sign": math.pi / 2.0,
+        }
+        for target_id, expected_roll in expected_rolls.items():
+            rpy = targets[target_id]["asset_pose"]["rpy"]
+            self.assertAlmostEqual(rpy[0], expected_roll, places=12, msg=target_id)
+            self.assertEqual(rpy[1:], [0.0, 0.0], target_id)
+            transformed_up = rotate_vector(rpy_to_quaternion(rpy), (0.0, 1.0, 0.0))
+            self.assertGreater(transformed_up[2], 0.99, target_id)
 
     def test_camera_optical_rotation_is_180_degrees_about_x(self):
         quaternion = self.manifest["sensors"]["camera"]["usd_camera_to_ros_optical_wxyz"]

@@ -687,7 +687,8 @@ The real robot stack needs:
 - Camera driver publishing `/camera/image_raw` and `/camera/camera_info`.
 - LDS-02 LiDAR bringup with `LDS_MODEL=LDS-02`.
 - Python dependencies for detector and semantic packages.
-- YOLO weights, currently `yolov8n.pt` for lightweight CPU/Jetson operation.
+- LocateAnything-3B weights and a CUDA-capable companion computer; CPU operation
+  is supported for diagnosis but is not suitable for a live camera stream.
 - Optional `semantic-nav-memory` worker dependencies for COLMAP enrichment, including `ffmpeg`, `ffprobe`, `pycolmap`, and `ultralytics`.
 
 The robot-side startup sequence should be:

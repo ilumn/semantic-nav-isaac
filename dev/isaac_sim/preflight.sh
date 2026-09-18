@@ -153,9 +153,9 @@ if isaac_add_semantic_pythonpath; then
 fi
 semantic_runtime_report="$(isaac_probe_semantic_runtime || true)"
 if [[ -n "${semantic_runtime_report}" && "${semantic_runtime_report}" == *"cuda=True"* && "${semantic_runtime_report}" == *"pins=True"* && "${semantic_runtime_report}" == *"ros_imports=True"* && "${semantic_runtime_report}" == *"worker_import=True"* ]]; then
-  check_pass "GPU detector runtime: ${semantic_runtime_report}"
+  check_pass "GPU perception runtime: ${semantic_runtime_report}"
 else
-  check_fail "Pinned GPU detector/refiner dependencies are unavailable to /usr/bin/python3; run ./bootstrap_runtime.sh --check"
+  check_fail "Pinned GPU perception/refiner dependencies are unavailable to /usr/bin/python3; run ./bootstrap_runtime.sh --check"
 fi
 
 for worker_tool in ffmpeg ffprobe; do
@@ -167,7 +167,7 @@ for worker_tool in ffmpeg ffprobe; do
 done
 
 if isaac_verify_port_assets; then
-  check_pass "Pinned detector, refiner, CLIP model, and local CLIP wheel assets"
+  check_pass "Pinned Locate Anything, refiner, CLIP model, and local CLIP wheel assets"
 else
   check_fail "A required model or vendored runtime wheel is missing or has the wrong SHA-256 digest (run ./fetch_models.sh --check)"
 fi

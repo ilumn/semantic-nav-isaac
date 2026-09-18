@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <!--
   detector_test.world — Minimal Gazebo Classic world for Stage-1/2 perception testing.
-  Purpose: YOLOv8 detector + LiDAR-camera localizer validation.
+  Purpose: Locate Anything detector + LiDAR-camera localizer validation.
            No SLAM, no Nav2, no warehouse walls.
 
   ═══ Validated Semantic Target Set ═══════════════════════════════════════════

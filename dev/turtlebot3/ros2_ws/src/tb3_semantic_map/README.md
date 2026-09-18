@@ -5,7 +5,7 @@
 Current implementation status:
 
 - message interfaces exist via `tb3_semantic_map_msgs`
-- `semantic_map_node` samples `/camera/image_raw`, reuses the YOLOv8 detector stack, and grounds detections into `map`
+- `semantic_map_node` samples `/camera/image_raw`, reuses the Locate Anything detector stack, and grounds detections into `map`
 - the node maintains live map-frame entity memory plus derived places, relations, and anchors
 - the node publishes semantic-map state, compatibility objects, markers, status, and debug images
 

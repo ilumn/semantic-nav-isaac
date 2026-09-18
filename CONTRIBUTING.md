@@ -9,8 +9,8 @@ contract documented in `docs/ISAAC_SIM_PORT.md`.
 1. Install Isaac Sim 6.0.1 and ROS 2 Jazzy on Ubuntu 24.04.
 2. Copy `dev/isaac_sim/.env.example` to `dev/isaac_sim/.env` and set the local
    Isaac installation and display values. Never commit `.env`.
-3. Run `dev/isaac_sim/fetch_models.sh --download`.
-4. Run `dev/isaac_sim/bootstrap_runtime.sh --allow-download`.
+3. Run `dev/isaac_sim/bootstrap_runtime.sh --allow-download`.
+4. Run `dev/isaac_sim/fetch_models.sh --download`.
 5. Generate semantic assets with
    `python3 dev/isaac_sim/scene/tools/convert_semantic_assets.py --execute`.
 6. Build with `dev/isaac_sim/build_ros.sh --clean-cache`.
