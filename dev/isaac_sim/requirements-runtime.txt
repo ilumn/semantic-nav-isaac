@@ -5,7 +5,7 @@ opencv-python==4.8.1.78
 pydantic==2.13.2
 pycolmap==4.0.3
 pyyaml==6.0.3
-torch==2.11.0
+torch==2.13.0
 torchvision==0.26.0
 ultralytics==8.4.38
 ultralytics-thop==2.0.18
