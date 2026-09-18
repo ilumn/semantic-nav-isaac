@@ -11,7 +11,7 @@ ultralytics==8.4.38
 ultralytics-thop==2.0.18
 # LocateAnything-3B primary perception runtime. The remaining Ultralytics pins
 # are retained for the optional semantic refinement worker.
-transformers==4.57.1
+transformers==5.10.1
 tokenizers==0.22.0
 accelerate==1.5.2
 timm==1.0.22
