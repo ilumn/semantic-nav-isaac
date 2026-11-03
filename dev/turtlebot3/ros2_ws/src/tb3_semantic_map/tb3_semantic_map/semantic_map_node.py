@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from collections import deque
 from typing import Optional
 
 import rclpy
@@ -67,6 +68,10 @@ class SemanticMapNode(Node):
         self.declare_parameter("generation_mode", "hybrid")
         self.declare_parameter("max_new_tokens", 2048)
         self.declare_parameter("local_files_only", True)
+        self.declare_parameter("yoloe_weights", "yoloe-11s-seg.pt")
+        self.declare_parameter("yoloe_conf", 0.25)
+        self.declare_parameter("yoloe_imgsz", 640)
+        self.declare_parameter("yoloe_background_classes", [""])
         self.declare_parameter("class_filter", ["__from_targets__"])
         self.declare_parameter("frame_sample_interval_sec", 0.5)
         self.declare_parameter("publish_debug_image", True)
@@ -74,6 +79,9 @@ class SemanticMapNode(Node):
         self.declare_parameter("camera_base_tx", 0.0)
         self.declare_parameter("camera_base_ty", 0.0)
         self.declare_parameter("camera_base_yaw_deg", 0.0)
+        self.declare_parameter("lidar_base_tx", 0.0)
+        self.declare_parameter("memory_recent_sec", 1.0)
+        self.declare_parameter("memory_min_observations", 5)
         self.declare_parameter("scan_window_half", 5)
         self.declare_parameter("min_valid_range", 0.12)
         self.declare_parameter("max_valid_range", 8.0)
@@ -166,6 +174,7 @@ class SemanticMapNode(Node):
             camera_base_tx=camera_base_tx,
             camera_base_ty=camera_base_ty,
             camera_base_yaw_deg=camera_base_yaw_deg,
+            lidar_base_tx=float(self.get_parameter("lidar_base_tx").value),
             bearing_sigma_deg=bearing_sigma_deg,
             range_sigma_ratio=range_sigma_ratio,
             min_range_sigma_m=min_range_sigma_m,
@@ -186,6 +195,11 @@ class SemanticMapNode(Node):
             generation_mode=generation_mode,
             max_new_tokens=max_new_tokens,
             local_files_only=local_files_only,
+            backend=self._detector_backend,
+            yoloe_weights=self.get_parameter("yoloe_weights").value,
+            yoloe_conf=float(self.get_parameter("yoloe_conf").value),
+            yoloe_imgsz=int(self.get_parameter("yoloe_imgsz").value),
+            yoloe_background_classes=[c for c in self.get_parameter("yoloe_background_classes").value if c],
         )
         self._detector.load()
 
@@ -201,13 +215,17 @@ class SemanticMapNode(Node):
         self._latest_sampled_image: Optional[Image] = None
         self._latest_camera_info: Optional[CameraInfo] = None
         self._latest_scan: Optional[LaserScan] = None
+        self._scan_history: deque = deque(maxlen=20)
         self._latest_map: Optional[OccupancyGrid] = None
         self._latest_refined_state: Optional[SemanticMapState] = None
         self._sampled_frame_count = 0
         self._last_detection_count = 0
         self._last_grounded_count = 0
 
-        self.create_subscription(Image, image_topic, self._image_cb, sensor_qos)
+        # Depth 1: when inference falls behind, drop frames instead of working through a stale queue.
+        self.create_subscription(
+            Image, image_topic, self._image_cb, QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
+        )
         self.create_subscription(CameraInfo, camera_info_topic, self._camera_info_cb, sensor_qos)
         self.create_subscription(LaserScan, scan_topic, self._scan_cb, sensor_qos)
         self.create_subscription(OccupancyGrid, map_topic, self._map_cb, map_qos)
@@ -246,6 +264,7 @@ class SemanticMapNode(Node):
 
     def _scan_cb(self, msg: LaserScan) -> None:
         self._latest_scan = msg
+        self._scan_history.append(msg)
 
     def _map_cb(self, msg: OccupancyGrid) -> None:
         self._latest_map = msg
@@ -263,15 +282,25 @@ class SemanticMapNode(Node):
             refinement_min_confidence=self._refinement_min_confidence,
         )
 
-    def _lookup_robot_pose(self) -> tuple[Optional[float], Optional[float], Optional[float]]:
+    def _scan_at(self, stamp_sec: float) -> LaserScan:
+        return min(
+            self._scan_history,
+            key=lambda s: abs(s.header.stamp.sec + s.header.stamp.nanosec * 1e-9 - stamp_sec),
+        )
+
+    def _lookup_robot_pose(self, stamp) -> tuple[Optional[float], Optional[float], Optional[float]]:
+        """Pose when the frame was captured; the latest pose if TF does not reach that far yet."""
         try:
             transform = self._tf_buffer.lookup_transform(
-                self._target_frame,
-                self._robot_base_frame,
-                Time(),
+                self._target_frame, self._robot_base_frame, Time.from_msg(stamp)
             )
         except Exception:
-            return None, None, None
+            try:
+                transform = self._tf_buffer.lookup_transform(
+                    self._target_frame, self._robot_base_frame, Time()
+                )
+            except Exception:
+                return None, None, None
 
         translation = transform.transform.translation
         rotation = transform.transform.rotation
@@ -310,7 +339,8 @@ class SemanticMapNode(Node):
     def _process_sampled_image(self, msg: Image, stamp_sec: float) -> None:
         if self._latest_scan is None:
             return
-        robot_x, robot_y, robot_yaw = self._lookup_robot_pose()
+        robot_x, robot_y, robot_yaw = self._lookup_robot_pose(msg.header.stamp)
+        scan = self._scan_at(stamp_sec)
         if robot_x is None or robot_y is None or robot_yaw is None:
             return
 
@@ -333,10 +363,10 @@ class SemanticMapNode(Node):
             grounded = self._grounder.ground_detection(
                 detection=detection,
                 image_width=int(msg.width),
-                scan_ranges=list(self._latest_scan.ranges),
-                scan_angle_min=float(self._latest_scan.angle_min),
-                scan_angle_max=float(self._latest_scan.angle_max),
-                scan_angle_increment=float(self._latest_scan.angle_increment),
+                scan_ranges=list(scan.ranges),
+                scan_angle_min=float(scan.angle_min),
+                scan_angle_max=float(scan.angle_max),
+                scan_angle_increment=float(scan.angle_increment),
                 robot_tx=robot_x,
                 robot_ty=robot_y,
                 robot_yaw=robot_yaw,
@@ -372,7 +402,18 @@ class SemanticMapNode(Node):
         now = self.get_clock().now()
         self._memory.age(float(now.nanoseconds) / 1e9)
         state = self._build_state()
+        # An entity stays in the live state for stale_timeout after its last detection, so sending
+        # them all would turn a single-frame false positive into several long-term observations.
+        now_sec = float(now.nanoseconds) / 1e9
+        recent = float(self.get_parameter("memory_recent_sec").value)
+        min_obs = int(self.get_parameter("memory_min_observations").value)
         compat = state_to_detection3d_array(state)
+        compat.detections = [
+            detection
+            for detection, entity in zip(compat.detections, state.entities)
+            if entity.observation_count >= min_obs
+            and now_sec - (entity.last_seen.sec + entity.last_seen.nanosec * 1e-9) <= recent
+        ]
         markers = self._marker_builder.build(state)
 
         self._state_pub.publish(state)

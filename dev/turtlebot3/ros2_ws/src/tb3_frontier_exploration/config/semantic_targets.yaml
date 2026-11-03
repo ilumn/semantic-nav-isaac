@@ -27,7 +27,7 @@
 semantic_targets:
 
   - semantic_name:   "table"
-    detector_label:  "bench"
+    detector_label:  "table"
     isaac_asset:     "table_marble"
     enabled:         true
     notes: >
@@ -51,3 +51,56 @@ semantic_targets:
     notes: >
       Direct label match. Highest detection confidence of the three targets.
       Optimise scene layout to place person centred in camera FOV first.
+  - semantic_name:   "bottle"
+    detector_label:  "bottle"
+    enabled:         true
+    notes: >
+      Real-robot test target. Use an upright bottle at least ~25 cm tall so the
+      LDS-02 scan plane (~18 cm above the floor) can range it for grounding.
+  - semantic_name:   "chair"
+    detector_label:  "chair"
+    enabled:         true
+    notes: >
+      Real-robot indoor target (needs to reach the ~18 cm lidar plane to be grounded).
+  - semantic_name:   "desk"
+    detector_label:  "desk"
+    enabled:         true
+    notes: >
+      Real-robot indoor target (needs to reach the ~18 cm lidar plane to be grounded).
+  - semantic_name:   "couch"
+    detector_label:  "couch"
+    enabled:         true
+    notes: >
+      Real-robot indoor target (needs to reach the ~18 cm lidar plane to be grounded).
+  - semantic_name:   "door"
+    detector_label:  "door"
+    enabled:         true
+    notes: >
+      Real-robot indoor target (needs to reach the ~18 cm lidar plane to be grounded).
+  - semantic_name:   "cabinet"
+    detector_label:  "cabinet"
+    enabled:         true
+    notes: >
+      Real-robot indoor target (needs to reach the ~18 cm lidar plane to be grounded).
+  - semantic_name:   "backpack"
+    detector_label:  "backpack"
+    enabled:         true
+    notes: >
+      Real-robot indoor target (needs to reach the ~18 cm lidar plane to be grounded).
+  - semantic_name:   "box"
+    detector_label:  "box"
+    enabled:         true
+    notes: >
+      Real-robot indoor target (needs to reach the ~18 cm lidar plane to be grounded).
+  - semantic_name:   "trash"
+    detector_label:  "trash can"
+    enabled:         true
+    notes: >
+      Real-robot indoor target (needs to reach the ~18 cm lidar plane to be grounded).
+
+  - semantic_name:   "soda"
+    detector_label: "soda can"
+    enabled:         true
+    notes: >
+      A can; named "soda" because the query parser treats "can" as a filler word
+      ("go to the soda can" -> soda).

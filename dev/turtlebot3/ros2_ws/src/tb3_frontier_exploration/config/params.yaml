@@ -18,7 +18,14 @@ frontier_detection_node:
     frame_id: "map"
 
     # Minimum number of adjacent frontier cells to form a cluster; smaller clusters are discarded.
-    min_cluster_size: 3 # default is 5
+    min_cluster_size: 8
+
+    # Frontier cells this close join one cluster. Sparse lidar rays break an open edge into short
+    # runs; linking only touching cells left no usable frontier on a fresh map, and the robot sat still.
+    cluster_link_radius_cells: 3
+
+    # Large frontiers get one goal per section of this size.
+    frontier_section_m: 1.0
 
     # Max cost at centroid to accept a frontier (0-255). Reject only lethal or
     # out-of-map cells here; Nav2's planner/controller still handle inflated
@@ -46,8 +53,8 @@ goal_assignment_node:
     # Ignore frontier centroids closer than this to the robot (m). Avoids sending trivial goals.
     min_frontier_distance: 0.5
 
-    # Cancel a goal and try another if it does not complete within this time (s).
-    goal_timeout: 20.0 # default is 60.0
+    # Cancel a goal and try another if the robot has not moved 15 cm for this long (s).
+    goal_timeout: 25.0
 
     # Frame for goal poses (typically "map"). Also used for TF lookups (map -> base_link).
     frame_id: "map"
@@ -57,7 +64,10 @@ goal_assignment_node:
     rate: 1.0
 
     # Do not select a goal within this distance (m) of the last failed/aborted goal.
-    failed_goal_avoidance_radius: 1.0
+    failed_goal_avoidance_radius: 0.6
+
+    # Failed goals may be retried after this long (s); the map will have changed by then.
+    failed_goal_forget_sec: 180.0
 
     # Throttle "no valid frontiers" / exploration-complete logs to this interval (s).
     exploration_complete_log_interval: 5.0

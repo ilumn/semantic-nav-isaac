@@ -25,6 +25,9 @@ def generate_launch_description():
     slam_params = os.path.join(pkg_coord, "config", "slam", "waffle_pi_real_slam.yaml")
 
     return LaunchDescription([
+        DeclareLaunchArgument("launch_detector", default_value="true"),
+        DeclareLaunchArgument("launch_localizer", default_value="true"),
+        DeclareLaunchArgument("launch_memory", default_value="true"),
         DeclareLaunchArgument("use_rviz", default_value="true"),
         DeclareLaunchArgument("detector_device", default_value="cpu"),
         DeclareLaunchArgument("refiner_worker_enabled", default_value="true"),
@@ -40,6 +43,9 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(stack_launch),
             launch_arguments={
                 "use_sim_time": "false",
+                "launch_memory": LaunchConfiguration("launch_memory"),
+                "launch_localizer": LaunchConfiguration("launch_localizer"),
+                "launch_detector": LaunchConfiguration("launch_detector"),
                 "use_rviz": LaunchConfiguration("use_rviz"),
                 "nav2_params_file": nav2_params,
                 "slam_params_file": slam_params,

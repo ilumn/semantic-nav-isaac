@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <nav2_msgs/action/navigate_to_pose.hpp>
@@ -83,6 +84,7 @@ public:
     declare_parameter<double>("rate", 1.0);
     declare_parameter<double>("min_frontier_distance", 0.5);
     declare_parameter<double>("failed_goal_avoidance_radius", 1.0);
+    declare_parameter<double>("failed_goal_forget_sec", 180.0);
     declare_parameter<double>("exploration_complete_log_interval", 5.0);
     declare_parameter<bool>("require_startup_warmup", false);
     declare_parameter<std::string>("startup_warmup_complete_topic", "exploration_warmup_complete");
@@ -253,7 +255,7 @@ private:
    * Implementation summary:
    * 1. Load `min_frontier_distance` and `failed_goal_avoidance_radius` from parameters (squared for comparisons).
    * 2. For each frontier pose, compute squared distance to `(rx, ry)`; skip if closer than `min_frontier_distance`.
-   * 3. If `last_failed_goal_` is set, skip centroids within `failed_goal_avoidance_radius` of that point.
+   * 3. If `failed_goals_` is set, skip centroids within `failed_goal_avoidance_radius` of that point.
    * 4. Among remaining, track the index with minimum squared distance.
    * 5. If none remain, return nullopt; else if `frame_id` was empty, copy `frontiers.header.frame_id`, then return index.
    *
@@ -287,10 +289,14 @@ private:
           i, gx, gy, std::sqrt(d2));
         continue;
       }
-      if (last_failed_goal_) {
-        double fdx = gx - last_failed_goal_->x;
-        double fdy = gy - last_failed_goal_->y;
-        if (fdx * fdx + fdy * fdy < avoid_radius_sq) {
+      bool near_failed = false;
+      for (const auto & failed : failed_goals_) {
+        double fdx = gx - failed.x;
+        double fdy = gy - failed.y;
+        near_failed = near_failed || fdx * fdx + fdy * fdy < avoid_radius_sq;
+      }
+      if (near_failed) {
+        {
           RCLCPP_DEBUG(get_logger(), "[select] Frontier [%zu] (%.2f, %.2f) skipped: near last failed goal",
             i, gx, gy);
           continue;
@@ -364,6 +370,13 @@ private:
 
     if (state_ == State::NAVIGATING) {
       if (current_goal_handle_ && goal_sent_time_) {
+        double rx, ry;
+        if (getRobotPoseInMap(rx, ry) &&
+          (!progress_point_ || std::hypot(rx - progress_point_->x, ry - progress_point_->y) >= 0.15))
+        {
+          progress_point_ = Point{rx, ry};
+          goal_sent_time_ = now();
+        }
         double elapsed = (now() - *goal_sent_time_).seconds();
         if (elapsed >= goal_timeout) {
           RCLCPP_WARN(get_logger(), "[timeout] Goal stalled for %.1fs (limit %.1fs), canceling",
@@ -470,6 +483,7 @@ private:
         RCLCPP_INFO(get_logger(), "[action] Goal accepted");
         current_goal_handle_ = gh;
         goal_sent_time_ = now();
+        progress_point_.reset();
         state_ = State::NAVIGATING;
       } else {
         if (!exploration_enabled_) {
@@ -494,7 +508,6 @@ private:
       switch (result.code) {
         case rclcpp_action::ResultCode::SUCCEEDED:
           RCLCPP_INFO(get_logger(), "[result] SUCCEEDED");
-          last_failed_goal_.reset();
           recordSuccessfulVisit(current_goal_x_, current_goal_y_);
           break;
         case rclcpp_action::ResultCode::ABORTED:
@@ -520,22 +533,29 @@ private:
    *
    * @param gx Goal x in map frame (meters), same as sent to Nav2.
    * @param gy Goal y in map frame (meters).
-   * @return void; writes `last_failed_goal_`.
+   * @return void; writes `failed_goals_`.
    *
    * Pipeline role:
    * - Provides **simple recovery**: reduces repeated attempts at the same bad centroid (obstacle, planner failure, etc.).
    *
    * Implementation summary:
-   * 1. Assign `last_failed_goal_` to `{gx, gy}`.
+   * 1. Assign `failed_goals_` to `{gx, gy}`.
    * 2. Log at DEBUG.
    *
    * Notes:
-   * - Cleared on **SUCCEEDED** in `result_callback`; not cleared on mere timeout cancel until the next outcome handling.
-   * - Only **one** failure point is stored; a new failure overwrites the previous avoidance center.
+   * - Not cleared on success: a reachable neighbour does not make a failed goal reachable. until the next outcome handling.
+   * - Every failure is stored until it is older than `failed_goal_forget_sec`; previously only one was kept, so two bad goals alternated forever. Old text: avoidance center.
    */
   void recordFailedGoal(double gx, double gy)
   {
-    last_failed_goal_ = {gx, gy};
+    const rclcpp::Time stamp = now();
+    const double forget_sec = get_parameter("failed_goal_forget_sec").as_double();
+    failed_goals_.erase(
+      std::remove_if(
+        failed_goals_.begin(), failed_goals_.end(),
+        [&](const FailedGoal & f) {return (stamp - f.stamp).seconds() > forget_sec;}),
+      failed_goals_.end());
+    failed_goals_.push_back({gx, gy, stamp});
     RCLCPP_DEBUG(get_logger(), "[failed] Recorded (%.2f, %.2f) for avoidance", gx, gy);
   }
 
@@ -627,7 +647,9 @@ private:
   double current_goal_y_{0.0};
 
   struct Point { double x, y; };
-  std::optional<Point> last_failed_goal_;
+  struct FailedGoal { double x, y; rclcpp::Time stamp; };
+  std::vector<FailedGoal> failed_goals_;
+  std::optional<Point> progress_point_;
   std::optional<rclcpp::Time> last_exploration_complete_log_time_;
 
   std::vector<Point> visit_history_;

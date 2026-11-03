@@ -365,6 +365,7 @@ class SemanticMapMemoryNode(Node):
         self.declare_parameter("mutex_min_observation_count", 3)
         self.declare_parameter("excluded_classes", ["person"])
         self.declare_parameter("allow_lidar_only_landmarks", False)
+        self.declare_parameter("snap_to_obstacles", True)
 
         in_topic        = self.get_parameter("input_topic").value
         out_topic       = self.get_parameter("output_topic").value
@@ -541,7 +542,9 @@ class SemanticMapMemoryNode(Node):
             if self._map_data is not None:
                 gx, gy = world_to_grid(mx, my, self._map_ox, self._map_oy, self._map_res)
 
-                if not (0 <= gx < self._map_width and 0 <= gy < self._map_height):
+                if not self.get_parameter("snap_to_obstacles").value:
+                    validation = "lidar_grounded"
+                elif not (0 <= gx < self._map_width and 0 <= gy < self._map_height):
                     if not self._allow_lidar_only:
                         continue
                     validation = "map_bounds_pending"
@@ -855,7 +858,9 @@ class SemanticMapMemoryNode(Node):
             entity.extent.y = self._sphere_r * 2.0
             entity.extent.z = self._sphere_r * 2.0
             min_obs = max(1, int(self._class_min_obs.get(lm.semantic_class, self._min_obs)))
-            entity.confidence = float(min(1.0, lm.observation_count / float(min_obs)))
+            # Grows with evidence so queries prefer well-observed landmarks over brief ones.
+            entity.confidence = float(max(min(1.0, lm.observation_count / float(min_obs)) * 0.5,
+                                          1.0 - math.exp(-lm.observation_count / 20.0)))
             if lm.validation != "occupancy_grid_validated":
                 entity.confidence = float(min(entity.confidence, 0.85))
             entity.observation_count = int(lm.observation_count)

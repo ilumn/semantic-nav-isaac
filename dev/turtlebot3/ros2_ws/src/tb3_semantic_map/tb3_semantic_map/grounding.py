@@ -4,7 +4,26 @@ import math
 from dataclasses import dataclass
 from typing import Optional
 
-from tb3_localizer.localizer_core import LocalizerCore
+from tb3_localizer.localizer_core import LocalizedObject, LocalizerCore
+
+
+# Plausible object widths in metres (min, max), checked against bbox width at the lidar range.
+OBJECT_WIDTH_M = {
+    "soda can": (0.02, 0.15),
+    "bottle": (0.02, 0.2),
+    "backpack": (0.15, 0.7),
+    "trash can": (0.15, 0.8),
+    "box": (0.05, 1.2),
+    "chair": (0.2, 1.1),
+    "person": (0.1, 1.2),
+    "door": (0.4, 1.4),
+    "cabinet": (0.25, 2.5),
+    "desk": (0.5, 2.5),
+    "table": (0.4, 3.0),
+    "couch": (0.6, 3.0),
+}
+EDGE_MARGIN_PX = 3.0      # a box touching the image side is cut off: its centre and width are wrong
+CLUSTER_GAP_M = 0.25      # returns further apart than this along the ray are separate surfaces
 
 
 @dataclass(slots=True)
@@ -58,6 +77,7 @@ class ObservationGrounder:
         camera_base_tx: float = 0.0,
         camera_base_ty: float = 0.0,
         camera_base_yaw_deg: float = 0.0,
+        lidar_base_tx: float = 0.0,
         bearing_sigma_deg: float = 2.0,
         range_sigma_ratio: float = 0.08,
         min_range_sigma_m: float = 0.05,
@@ -72,6 +92,10 @@ class ObservationGrounder:
         self._camera_base_tx = float(camera_base_tx)
         self._camera_base_ty = float(camera_base_ty)
         self._camera_base_yaw = math.radians(camera_base_yaw_deg)
+        self._lidar_base_tx = float(lidar_base_tx)
+        self._scan_window_half = int(scan_window_half)
+        self._min_valid_range = float(min_valid_range)
+        self._max_valid_range = float(max_valid_range)
         self._bearing_sigma_rad = math.radians(bearing_sigma_deg)
         self._range_sigma_ratio = float(range_sigma_ratio)
         self._min_range_sigma_m = float(min_range_sigma_m)
@@ -106,6 +130,46 @@ class ObservationGrounder:
         cov_yy = dydr * dydr * var_r + dydtheta * dydtheta * var_theta
         return cov_xx, cov_xy, cov_yy
 
+    def _range_along_camera_ray(
+        self,
+        bearing: float,
+        half_width_rad: float,
+        scan_ranges: list[float],
+        scan_angle_min: float,
+        scan_angle_increment: float,
+    ) -> Optional[float]:
+        """Median distance from the camera to the scan points seen around a camera bearing.
+
+        The lidar and camera are mounted apart, so each scan point is moved into the camera's
+        position before it is compared with the bearing from the image.
+        """
+        window = max(
+            1.5 * abs(scan_angle_increment),
+            min(half_width_rad, self._scan_window_half * abs(scan_angle_increment)),
+        )
+        distances = []
+        for i, r in enumerate(scan_ranges):
+            if not (math.isfinite(r) and self._min_valid_range <= r <= self._max_valid_range):
+                continue
+            angle = scan_angle_min + i * scan_angle_increment
+            dx = self._lidar_base_tx + r * math.cos(angle) - self._camera_base_tx
+            dy = r * math.sin(angle) - self._camera_base_ty
+            seen_at = math.atan2(dy, dx) - self._camera_base_yaw
+            if abs(math.atan2(math.sin(seen_at - bearing), math.cos(seen_at - bearing))) <= window:
+                distances.append(math.hypot(dx, dy))
+        if not distances:
+            return None
+        # The object is the nearest surface in the box; returns past it are what stands behind.
+        distances.sort()
+        cluster = [distances[0]]
+        for d in distances[1:]:
+            if d - cluster[-1] > CLUSTER_GAP_M:
+                if len(cluster) >= 2:
+                    break
+                cluster = []
+            cluster.append(d)
+        return cluster[len(cluster) // 2]
+
     def ground_detection(
         self,
         detection: dict,
@@ -122,18 +186,34 @@ class ObservationGrounder:
         x1, _, x2, _ = detection["bbox_xyxy"]
         bbox_center_x = (float(x1) + float(x2)) / 2.0
         bbox_width_px = max(1.0, float(x2) - float(x1))
-        localized = self._localizer.localize(
+        if image_width <= 0:
+            return None
+        if float(x1) <= EDGE_MARGIN_PX or float(x2) >= image_width - EDGE_MARGIN_PX:
+            return None
+        half_image = image_width / 2.0
+        tan_half_fov = math.tan(self.camera_hfov_rad / 2.0)
+        bearing = math.atan(-(bbox_center_x - half_image) / half_image * tan_half_fov)
+        half_width_rad = 0.5 * bbox_width_px / image_width * self.camera_hfov_rad
+        range_m = self._range_along_camera_ray(
+            bearing, half_width_rad, scan_ranges, scan_angle_min, scan_angle_increment
+        )
+        if range_m is None:
+            return None
+        width_limits = OBJECT_WIDTH_M.get(detection["label"])
+        if width_limits is not None:
+            width_m = 2.0 * range_m * math.tan(half_width_rad)
+            if not width_limits[0] <= width_m <= width_limits[1]:
+                return None
+        localized = LocalizedObject(
             label=detection["label"],
             confidence=float(detection["conf"]),
-            bbox_center_x=bbox_center_x,
-            image_width=image_width,
-            scan_ranges=scan_ranges,
-            scan_angle_min=scan_angle_min,
-            scan_angle_max=scan_angle_max,
-            scan_angle_increment=scan_angle_increment,
+            bearing_rad=bearing,
+            range_m=range_m,
+            x=range_m * math.cos(bearing),
+            y=range_m * math.sin(bearing),
+            pixel_u=bbox_center_x,
+            scan_index=-1,
         )
-        if localized is None:
-            return None
 
         base_x, base_y = transform_camera_to_base(
             localized.x,

@@ -51,10 +51,10 @@ def generate_launch_description():
             parameters=[
                 config,
                 {"use_sim_time": use_sim_time},
-                {"frontier_detection_node": {"ros__parameters": {
+                {
                     "map_topic": map_topic,
                     "costmap_topic": costmap_topic,
-                }}},
+                },
             ],
             output="screen",
         ),
@@ -65,11 +65,11 @@ def generate_launch_description():
             parameters=[
                 config,
                 {"use_sim_time": use_sim_time},
-                {"goal_assignment_node": {"ros__parameters": {
+                {
                     "odom_topic": odom_topic,
                     "require_startup_warmup": require_startup_warmup,
                     "exploration_initially_enabled": exploration_initially_enabled,
-                }}},
+                },
             ],
             output="screen",
         ),

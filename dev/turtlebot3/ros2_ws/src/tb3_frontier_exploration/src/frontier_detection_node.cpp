@@ -7,6 +7,9 @@
 
 #include <vector>
 #include <set>
+#include <limits>
+#include <algorithm>
+#include <map>
 #include <queue>
 #include <mutex>
 #include <cstdint>
@@ -72,6 +75,8 @@ public:
     declare_parameter<std::string>("frontiers_markers_topic", "/frontiers_markers");
     declare_parameter<std::string>("frame_id", "map");
     declare_parameter<int>("min_cluster_size", 5);
+    declare_parameter<int>("cluster_link_radius_cells", 1);
+    declare_parameter<double>("frontier_section_m", 1.0);
     declare_parameter<int>("cost_threshold", 128);
     declare_parameter<bool>("use_costmap_filter", true);
     declare_parameter<bool>("publish_raw_markers", true);
@@ -233,8 +238,7 @@ private:
     std::set<Cell> frontier_set(cells.begin(), cells.end());
     std::set<Cell> visited;
     std::vector<Cluster> clusters;
-    const int dx[] = {-1, -1, -1,  0,  0,  1,  1,  1};
-    const int dy[] = {-1,  0,  1, -1,  1, -1,  0,  1};
+    const int radius = static_cast<int>(get_parameter("cluster_link_radius_cells").as_int());
 
     for (const Cell & seed : cells) {
       if (visited.count(seed)) continue;
@@ -246,12 +250,14 @@ private:
         Cell c = q.front();
         q.pop();
         cluster.push_back(c);
-        for (int i = 0; i < 8; i++) {
-          Cell n(c.first + dx[i], c.second + dy[i]);
-          if (n.first < 0 || n.first >= width || n.second < 0 || n.second >= height) continue;
-          if (frontier_set.count(n) && !visited.count(n)) {
-            visited.insert(n);
-            q.push(n);
+        for (int dx = -radius; dx <= radius; dx++) {
+          for (int dy = -radius; dy <= radius; dy++) {
+            Cell n(c.first + dx, c.second + dy);
+            if (n.first < 0 || n.first >= width || n.second < 0 || n.second >= height) continue;
+            if (frontier_set.count(n) && !visited.count(n)) {
+              visited.insert(n);
+              q.push(n);
+            }
           }
         }
       }
@@ -443,6 +449,9 @@ private:
 
     FRONTIER_LOG("[frontier] 2. total clusters: %zu (min_cluster_size=%d)", clusters.size(), min_size);
 
+    const int section_cells = std::max(
+      1, static_cast<int>(get_parameter("frontier_section_m").as_double() / msg->info.resolution));
+    const int min_section_cells = 3;
     std::vector<std::pair<double, double>> all_centroids;
     for (size_t ci = 0; ci < clusters.size(); ci++) {
       const Cluster & cl = clusters[ci];
@@ -452,8 +461,30 @@ private:
         continue;
       }
       double cx, cy;
-      clusterCentroid(*msg, cl, cx, cy);
-      all_centroids.emplace_back(cx, cy);
+      // One goal per section of frontier: a single goal for a frontier ringing the robot would sit
+      // on the robot itself, or on speckle right next to it, and hide everything further out.
+      std::map<std::pair<int, int>, Cluster> sections;
+      for (const Cell & cell : cl) {
+        sections[{cell.first / section_cells, cell.second / section_cells}].push_back(cell);
+      }
+      for (const auto & section : sections) {
+        if (static_cast<int>(section.second.size()) < min_section_cells) continue;
+        clusterCentroid(*msg, section.second, cx, cy);
+        // A real frontier cell near the middle: the middle itself can be inside a wall.
+        double best_d2 = std::numeric_limits<double>::max();
+        double goal_x = cx, goal_y = cy;
+        for (const Cell & cell : section.second) {
+          double wx, wy;
+          gridToWorld(*msg, cell.first, cell.second, wx, wy);
+          const double d2 = (wx - cx) * (wx - cx) + (wy - cy) * (wy - cy);
+          if (d2 < best_d2) {
+            best_d2 = d2;
+            goal_x = wx;
+            goal_y = wy;
+          }
+        }
+        all_centroids.emplace_back(goal_x, goal_y);
+      }
       FRONTIER_LOG("[frontier] 4. cluster[%zu] centroid (representative): (%.3f, %.3f)", ci, cx, cy);
     }
 

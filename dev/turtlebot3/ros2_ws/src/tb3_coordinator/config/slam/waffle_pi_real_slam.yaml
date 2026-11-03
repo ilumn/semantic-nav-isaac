@@ -15,7 +15,7 @@ slam_toolbox:
     odom_frame: "odom"
     map_frame: "map"
     base_frame: "base_link"
-    scan_topic: "/scan"
+    scan_topic: "/scan_slam"  # LDS-02 point count varies per spin; slam_toolbox needs the fixed-size resample
     mode: "mapping"
     use_map_saver: true
 
@@ -26,7 +26,7 @@ slam_toolbox:
     resolution: 0.05
     restamp_tf: false
     min_laser_range: 0.12
-    max_laser_range: 3.5
+    max_laser_range: 6.0  # LDS-02 is good to ~8 m; 3.5 m (LDS-01 default) left objects past 3.5 m off the map
     minimum_time_interval: 0.2
     transform_timeout: 0.5
     tf_buffer_duration: 30.0

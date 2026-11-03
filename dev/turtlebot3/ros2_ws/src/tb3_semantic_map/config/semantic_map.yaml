@@ -25,7 +25,11 @@ semantic_map_node:
     camera_frame: ""
 
     # ── Detection / sampling ─────────────────────────────
-    detector_backend: "locate_anything"
+    detector_backend: "yoloe"   # real robot: 18 fps at most with 11l on the Orin NX; "locate_anything" is ~0.3 fps
+    yoloe_weights: "/mnt/data/models/yoloe-11l-seg.pt"  # 11s called plain walls and table frames doors
+    yoloe_conf: 0.3
+    yoloe_imgsz: 640
+    yoloe_background_classes: ["wall", "floor", "baseboard", "refrigerator", "oven", "dishwasher", "wood", "window", "curtain", "shelf"]
     model_id: "nvidia/LocateAnything-3B"
     model_revision: "c32291ca5e996f5a7a485845b4f57a233936bba0"
     device: "cuda:0"
@@ -33,13 +37,14 @@ semantic_map_node:
     max_new_tokens: 2048
     local_files_only: true
     class_filter: ["__from_targets__"]
-    frame_sample_interval_sec: 0.5
+    frame_sample_interval_sec: 0.1
     publish_debug_image: true
 
     # ── Grounding ─────────────────────────────────────────
     camera_hfov_deg: 62.2
-    camera_base_tx: 0.0
-    camera_base_ty: 0.0
+    camera_base_tx: 0.073   # URDF camera position (user-confirmed mount)
+    camera_base_ty: -0.011
+    lidar_base_tx: -0.064   # URDF base_scan position
     camera_base_yaw_deg: 0.0
     scan_window_half: 5
     min_valid_range: 0.12
@@ -53,6 +58,8 @@ semantic_map_node:
     entity_match_distance_m: 1.0
     position_smoothing_alpha: 0.3
     stale_timeout: 5.0
+    memory_recent_sec: 1.0        # only entities seen this recently feed long-term memory
+    memory_min_observations: 5    # about 0.6 s of detections before an entity can reach memory
     remove_timeout: 30.0
     publish_rate: 2.0
     enable_refinement_enrichment: true

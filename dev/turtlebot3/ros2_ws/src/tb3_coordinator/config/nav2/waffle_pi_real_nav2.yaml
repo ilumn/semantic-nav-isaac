@@ -4,32 +4,6 @@
 # demos directly. It keeps the real robot on modest velocity/acceleration limits
 # and uses only the 2D LDS scan as the authoritative obstacle source.
 
-amcl:
-  ros__parameters:
-    alpha1: 0.2
-    alpha2: 0.2
-    alpha3: 0.2
-    alpha4: 0.2
-    alpha5: 0.2
-    base_frame_id: "base_link"
-    global_frame_id: "map"
-    odom_frame_id: "odom"
-    robot_model_type: "nav2_amcl::DifferentialMotionModel"
-    scan_topic: "/scan"
-    map_topic: "/map"
-    laser_model_type: "likelihood_field"
-    max_beams: 60
-    min_particles: 500
-    max_particles: 2000
-    pf_err: 0.05
-    pf_z: 0.99
-    resample_interval: 1
-    transform_tolerance: 0.5
-    update_min_a: 0.2
-    update_min_d: 0.25
-    set_initial_pose: false
-    always_reset_initial_pose: false
-
 bt_navigator:
   ros__parameters:
     global_frame: "map"
@@ -47,19 +21,6 @@ bt_navigator:
       plugin: "nav2_bt_navigator::NavigateToPoseNavigator"
     navigate_through_poses:
       plugin: "nav2_bt_navigator::NavigateThroughPosesNavigator"
-    error_code_name_prefixes:
-      - assisted_teleop
-      - backup
-      - compute_path
-      - dock_robot
-      - drive_on_heading
-      - follow_path
-      - nav_thru_poses
-      - nav_to_pose
-      - spin
-      - route
-      - undock_robot
-      - wait
 
 controller_server:
   ros__parameters:
@@ -80,46 +41,35 @@ controller_server:
       plugin: "nav2_controller::SimpleGoalChecker"
       xy_goal_tolerance: 0.25
       yaw_goal_tolerance: 0.35
+    # Regulated Pure Pursuit: turns on the spot until roughly facing the path, then follows it.
+    # DWB oscillated here, flipping between small left and right turns with no forward motion.
     FollowPath:
-      plugin: "dwb_core::DWBLocalPlanner"
-      debug_trajectory_details: false
-      min_vel_x: 0.0
-      min_vel_y: 0.0
-      max_vel_x: 0.18
-      max_vel_y: 0.0
-      max_vel_theta: 0.7
-      min_speed_xy: 0.0
-      max_speed_xy: 0.18
-      min_speed_theta: 0.0
-      acc_lim_x: 0.7
-      acc_lim_y: 0.0
-      acc_lim_theta: 1.4
-      decel_lim_x: -0.7
-      decel_lim_y: 0.0
-      decel_lim_theta: -1.4
-      vx_samples: 20
-      vy_samples: 0
-      vtheta_samples: 40
-      sim_time: 1.5
-      linear_granularity: 0.05
-      angular_granularity: 0.025
+      plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      desired_linear_vel: 0.18
+      lookahead_dist: 0.45
+      min_lookahead_dist: 0.3
+      max_lookahead_dist: 0.7
+      lookahead_time: 1.5
+      use_velocity_scaled_lookahead_dist: true
       transform_tolerance: 0.5
-      xy_goal_tolerance: 0.25
-      trans_stopped_velocity: 0.05
-      short_circuit_trajectory_evaluation: true
-      stateful: true
-      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
-      BaseObstacle.scale: 0.03
-      PathAlign.scale: 32.0
-      PathAlign.forward_point_distance: 0.1
-      GoalAlign.scale: 24.0
-      GoalAlign.forward_point_distance: 0.1
-      PathDist.scale: 32.0
-      GoalDist.scale: 24.0
-      RotateToGoal.scale: 32.0
-      RotateToGoal.slowing_factor: 5.0
-      RotateToGoal.lookahead_time: -1.0
-    enable_stamped_cmd_vel: true
+      min_approach_linear_velocity: 0.06  # the wheels do not execute much slower than this
+      approach_velocity_scaling_dist: 0.5
+      use_collision_detection: true
+      max_allowed_time_to_collision_up_to_carrot: 1.5
+      use_regulated_linear_velocity_scaling: true
+      use_cost_regulated_linear_velocity_scaling: true
+      regulated_linear_scaling_min_radius: 0.5
+      regulated_linear_scaling_min_speed: 0.06
+      cost_scaling_dist: 0.4
+      cost_scaling_gain: 1.0
+      inflation_cost_scaling_factor: 5.0
+      use_rotate_to_heading: true
+      rotate_to_heading_min_angle: 0.6
+      rotate_to_heading_angular_vel: 0.6
+      max_angular_accel: 1.4
+      allow_reversing: false
+      use_interpolation: true
+      max_robot_pose_search_dist: 3.0
 
 local_costmap:
   local_costmap:
@@ -132,7 +82,7 @@ local_costmap:
       width: 3
       height: 3
       resolution: 0.05
-      robot_radius: 0.22
+      robot_radius: 0.26  # the axle is forward of centre: rear corners sweep this circle
       transform_tolerance: 0.5
       plugins: ["obstacle_layer", "inflation_layer"]
       obstacle_layer:
@@ -163,7 +113,7 @@ global_costmap:
       global_frame: "map"
       robot_base_frame: "base_link"
       transform_tolerance: 0.5
-      robot_radius: 0.22
+      robot_radius: 0.26  # the axle is forward of centre: rear corners sweep this circle
       resolution: 0.05
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
@@ -238,7 +188,6 @@ behavior_server:
     max_rotational_vel: 0.7
     min_rotational_vel: 0.2
     rotational_acc_lim: 1.4
-    enable_stamped_cmd_vel: true
 
 waypoint_follower:
   ros__parameters:
@@ -249,44 +198,6 @@ waypoint_follower:
       plugin: "nav2_waypoint_follower::WaitAtWaypoint"
       enabled: true
       waypoint_pause_duration: 200
-
-collision_monitor:
-  ros__parameters:
-    base_frame_id: "base_link"
-    odom_frame_id: "odom"
-    cmd_vel_in_topic: "cmd_vel_smoothed"
-    cmd_vel_out_topic: "cmd_vel"
-    state_topic: "collision_monitor_state"
-    transform_tolerance: 0.5
-    source_timeout: 1.0
-    base_shift_correction: true
-    stop_pub_timeout: 1.0
-    enable_stamped_cmd_vel: true
-    use_realtime_priority: false
-    polygons: ["PolygonStop", "PolygonSlow"]
-    PolygonStop:
-      type: "circle"
-      radius: 0.28
-      action_type: "stop"
-      min_points: 3
-      visualize: true
-      polygon_pub_topic: "polygon_stop"
-      enabled: true
-    PolygonSlow:
-      type: "circle"
-      radius: 0.45
-      action_type: "slowdown"
-      min_points: 3
-      slowdown_ratio: 0.35
-      visualize: true
-      polygon_pub_topic: "polygon_slowdown"
-      enabled: true
-    observation_sources: ["scan"]
-    scan:
-      source_timeout: 0.3
-      type: "scan"
-      topic: "/scan"
-      enabled: true
 
 velocity_smoother:
   ros__parameters:
@@ -302,4 +213,3 @@ velocity_smoother:
     odom_topic: "/odom"
     odom_duration: 0.1
     use_realtime_priority: false
-    enable_stamped_cmd_vel: true
