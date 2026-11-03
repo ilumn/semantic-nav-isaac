@@ -1,0 +1,17 @@
+[Unit]
+Description=semnav: USB camera 640x480, unrotated (/camera_raw/*; see semnav-camflip)
+PartOf=semnav.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/mnt/data/models
+ExecStart=/bin/bash -c 'source /mnt/data/semnav/env.sh && exec ros2 run v4l2_camera v4l2_camera_node --ros-args --log-level compressed_depth_image_transport:=fatal -p video_device:=/dev/video0 -p camera_frame_id:=camera_link -p image_size:=[640,480] -r image_raw:=/camera_raw/image_raw -r camera_info:=/camera_raw/camera_info -r image_raw/compressed:=/camera_raw/image_raw/compressed'
+# US mains is 60 Hz; the camera ships set to 50 Hz anti-flicker.
+ExecStartPost=-/bin/bash -c 'sleep 3; /usr/bin/v4l2-ctl -d /dev/video0 -c power_line_frequency=2'
+KillSignal=SIGINT
+KillMode=mixed
+TimeoutStopSec=20
+Restart=always
+RestartSec=3
+SyslogIdentifier=semnav-camera

@@ -1,0 +1,17 @@
+[Unit]
+Description=semnav: semantic navigation stack (SLAM, Nav2, YOLOE semantic map, memory, coordinator)
+PartOf=semnav.target
+StartLimitIntervalSec=0
+After=semnav-base.service semnav-scan.service semnav-camera.service
+
+[Service]
+Type=simple
+WorkingDirectory=/mnt/data/models
+ExecStart=/bin/bash -c 'source /mnt/data/semnav/env.sh && exec ros2 launch /mnt/data/semnav/launch/stack.launch.py'
+
+KillSignal=SIGINT
+KillMode=mixed
+TimeoutStopSec=20
+Restart=always
+RestartSec=3
+SyslogIdentifier=semnav-stack

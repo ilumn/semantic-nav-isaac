@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# semnav: run and command the robot. See /mnt/data/semnav/README.md
+#
+#   semnav status              health: sensors, pose, detector, memory, motion, services
+#   semnav up | down | reset   start / stop / restart the semantic stack (reset = fresh map + memory)
+#   semnav arm | explore       arm with exploration off | on
+#   semnav disarm | stop       disarm and zero velocity (stop also aborts look/find/go)
+#   semnav go "go to the door" arm, send the command, wait, disarm
+#   semnav look door           tether-safe look-around until it is in memory
+#   semnav find door ["text"]  look, then go
+#   semnav restart <unit>      safety | base | scan | camera | camflip | foxglove | detimg | control | stack
+#   semnav logs [unit] [-f]    journald logs (all semnav units if no unit given)
+#   semnav sh                  shell with the robot's ROS environment (ros2 topic list, ...)
+#   semnav dryrun on|off       on: everything runs but the wheels get zero velocity
+#   semnav install             (re)link the systemd units and enable boot start
+set -uo pipefail
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+HOME_DIR=/mnt/data/semnav
+SOCK="$XDG_RUNTIME_DIR/semnav.sock"
+
+ctl() {  # send one command to the control node and stream its reply
+  python3 - "$SOCK" "$*" <<'PY'
+import socket, sys
+sock_path, command = sys.argv[1], sys.argv[2]
+def connect():
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.connect(sock_path)
+    return s
+try:
+    s = connect()
+except OSError:
+    print("semnav control is not running (`semnav restart control`, `semnav logs control`)")
+    sys.exit(1)
+s.sendall((command + "\n").encode())
+try:
+    while True:
+        data = s.recv(4096)
+        if not data:
+            break
+        sys.stdout.write(data.decode(errors="replace"))
+        sys.stdout.flush()
+except KeyboardInterrupt:
+    print("\ninterrupted: stopping the robot")
+    t = connect(); t.sendall(b"stop\n"); print(t.recv(4096).decode(errors="replace"), end="")
+    sys.exit(130)
+PY
+}
+
+services() {
+  local line=""
+  for u in safety base scan camera camflip foxglove detimg control stack; do
+    line+="$u:$(systemctl --user is-active semnav-$u 2>/dev/null) "
+  done
+  echo "  services: $line"
+}
+
+wait_ready() {  # wait for the stack to come up and localize
+  local deadline=$((SECONDS + ${1:-120}))
+  while [ $SECONDS -lt $deadline ]; do
+    if ctl status --json 2>/dev/null | python3 -c 'import json,sys; h=json.load(sys.stdin); sys.exit(0 if h["inputs"]["semantic_status"]["age"] is not None and h["inputs"]["semantic_status"]["age"] < 3 and h["localization"]["ok"] else 1)' 2>/dev/null; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
+case "${1:-status}" in
+  status) ctl status ${2:-}; [ "${2:-}" = "--json" ] || services ;;
+  up)
+    systemctl --user start semnav-stack
+    echo "starting the semantic stack (about 30-60 s)..."
+    wait_ready 150 || echo "stack is not healthy yet; see \`semnav status\` and \`semnav logs stack\`"
+    ctl status; services ;;
+  down) ctl stop; systemctl --user stop semnav-stack; services ;;
+  reset)
+    ctl stop; systemctl --user restart semnav-stack
+    echo "restarting the semantic stack with a fresh map and memory (about 30-60 s)..."
+    wait_ready 150 || echo "stack is not healthy yet; see \`semnav status\` and \`semnav logs stack\`"
+    ctl status; services ;;
+  arm|explore|disarm|stop) ctl "$1" ;;
+  go|look|find) cmd=$1; shift; [ $# -gt 0 ] || { sed -n 2,15p "$0"; exit 2; }; ctl "$cmd $*" ;;
+  restart) [ -n "${2:-}" ] || { echo "usage: semnav restart <unit>"; exit 2; }
+    systemctl --user restart "semnav-$2"; systemctl --user --no-pager status "semnav-$2" | head -3 ;;
+  logs)  # user-unit logs land in the system journal on this Jetson (volatile journald)
+    if [ -n "${2:-}" ] && [ "$2" != "-f" ]; then matches=("_SYSTEMD_USER_UNIT=semnav-$2.service"); shift 2
+    else matches=(); for u in safety base scan camera camflip foxglove detimg control stack; do matches+=("_SYSTEMD_USER_UNIT=semnav-$u.service"); done; shift; fi
+    journalctl "${matches[@]}" -n 100 --no-pager -o short "$@" ;;
+  sh) exec bash --rcfile <(echo "source ~/.bashrc; source $HOME_DIR/env.sh; PS1='(semnav) '\"\$PS1\"") -i ;;
+  install)
+    mkdir -p ~/.config/systemd/user
+    for f in "$HOME_DIR"/systemd/*; do ln -sf "$f" ~/.config/systemd/user/; done
+    systemctl --user daemon-reload
+    systemctl --user enable semnav.target
+    echo "installed; semnav.target starts at boot (sensors, Foxglove, control; motion unarmed)" ;;
+  dryrun)
+    case "${2:-}" in
+      on) touch "$HOME_DIR/dry_run" ;;
+      off) rm -f "$HOME_DIR/dry_run" ;;
+      *) echo "usage: semnav dryrun on|off"; exit 2 ;;
+    esac
+    echo "dry run ${2}" ;;
+  *) sed -n 2,15p "$0"; exit 2 ;;
+esac

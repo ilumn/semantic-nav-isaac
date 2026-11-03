@@ -1,0 +1,16 @@
+[Unit]
+Description=semnav: Rotate camera 180 degrees (/camera_raw/* -> /camera/*)
+PartOf=semnav.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/mnt/data/models
+ExecStart=/bin/bash -c 'source /mnt/data/semnav/env.sh && exec python3 /mnt/data/semnav/camera_flip.py'
+
+KillSignal=SIGINT
+KillMode=mixed
+TimeoutStopSec=20
+Restart=always
+RestartSec=3
+SyslogIdentifier=semnav-camflip

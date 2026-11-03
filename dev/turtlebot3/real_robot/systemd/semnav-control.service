@@ -1,0 +1,16 @@
+[Unit]
+Description=semnav: control node: motion commands, health, watchdog
+PartOf=semnav.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/mnt/data/models
+ExecStart=/bin/bash -c 'source /mnt/data/semnav/env.sh && exec python3 /mnt/data/semnav/semnav_control.py'
+
+KillSignal=SIGINT
+KillMode=mixed
+TimeoutStopSec=20
+Restart=always
+RestartSec=3
+SyslogIdentifier=semnav-control

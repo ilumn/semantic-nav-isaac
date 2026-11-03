@@ -1,0 +1,16 @@
+[Unit]
+Description=semnav: Foxglove bridge on the Tailscale address only (port 8765)
+PartOf=semnav.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/mnt/data/models
+ExecStart=/bin/bash -c 'source /mnt/data/semnav/env.sh && exec ros2 launch foxglove_bridge foxglove_bridge_launch.xml port:=8765 address:=$$(tailscale ip -4) send_buffer_limit:=2000000'
+# Tailscale may not be up yet at boot; the unit just retries until it is.
+KillSignal=SIGINT
+KillMode=mixed
+TimeoutStopSec=20
+Restart=always
+RestartSec=3
+SyslogIdentifier=semnav-foxglove

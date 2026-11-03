@@ -1,0 +1,16 @@
+[Unit]
+Description=semnav: TurtleBot3 base (OpenCR, odometry, IMU) + LDS-02 lidar
+PartOf=semnav.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/mnt/data/models
+ExecStart=/bin/bash -c 'source /mnt/data/semnav/env.sh && exec ros2 launch /mnt/data/semnav/launch/base.launch.py'
+
+KillSignal=SIGINT
+KillMode=mixed
+TimeoutStopSec=20
+Restart=always
+RestartSec=3
+SyslogIdentifier=semnav-base

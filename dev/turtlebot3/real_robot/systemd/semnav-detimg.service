@@ -1,0 +1,16 @@
+[Unit]
+Description=semnav: compressed copy of the detector image for remote viewers
+PartOf=semnav.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/mnt/data/models
+ExecStart=/bin/bash -c 'source /mnt/data/semnav/env.sh && exec ros2 run image_transport republish raw compressed --ros-args -r in:=/semantic_map/live_debug_image -r out:=/semantic_map/live_debug_image -r out/compressed:=/semantic_map/live_debug_image/compressed'
+
+KillSignal=SIGINT
+KillMode=mixed
+TimeoutStopSec=20
+Restart=always
+RestartSec=3
+SyslogIdentifier=semnav-detimg

@@ -1,0 +1,6 @@
+[Unit]
+Description=semnav robot runtime at boot: sensors, Foxglove, control (motion starts unarmed)
+Wants=semnav-safety.service semnav-base.service semnav-scan.service semnav-camera.service semnav-camflip.service semnav-foxglove.service semnav-detimg.service semnav-control.service
+
+[Install]
+WantedBy=default.target
