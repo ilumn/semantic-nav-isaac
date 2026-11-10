@@ -516,11 +516,6 @@ class SemanticMapMemoryNode(Node):
 
             raw_x = det.bbox.center.position.x
             raw_y = det.bbox.center.position.y
-            obs_range = math.hypot(raw_x, raw_y)
-
-            class_max = self._class_max_range.get(label, self._max_obs_range)
-            if obs_range > class_max:
-                continue
 
             pt_in = PointStamped()
             pt_in.header.stamp = rclpy.time.Time(seconds=0).to_msg()
@@ -536,6 +531,19 @@ class SemanticMapMemoryNode(Node):
                 continue
 
             mx, my = pt_out.point.x, pt_out.point.y
+
+            # Range from the robot, not from the frame origin: observations arrive in the map frame,
+            # and measuring from the map origin dropped everything once the robot was 6 m from start.
+            try:
+                robot = self._tf_buffer.lookup_transform(
+                    self._frame, "base_link", rclpy.time.Time(),
+                    timeout=Duration(seconds=self._tf_tout))
+            except Exception:
+                continue
+            obs_range = math.hypot(mx - robot.transform.translation.x, my - robot.transform.translation.y)
+            class_max = self._class_max_range.get(label, self._max_obs_range)
+            if obs_range > class_max:
+                continue
             rx, ry = mx, my
             validation = "map_unavailable"
 

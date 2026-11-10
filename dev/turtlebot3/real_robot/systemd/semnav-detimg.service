@@ -1,12 +1,12 @@
 [Unit]
-Description=semnav: compressed copy of the detector image for remote viewers
+Description=semnav: compressed, size-capped copy of the detector image for remote viewers
 PartOf=semnav.target
 StartLimitIntervalSec=0
 
 [Service]
 Type=simple
 WorkingDirectory=/mnt/data/models
-ExecStart=/bin/bash -c 'source /mnt/data/semnav/env.sh && exec ros2 run image_transport republish raw compressed --ros-args -r in:=/semantic_map/live_debug_image -r out:=/semantic_map/live_debug_image -r out/compressed:=/semantic_map/live_debug_image/compressed'
+ExecStart=/bin/bash -c 'source /mnt/data/semnav/env.sh && exec python3 /mnt/data/semnav/debug_jpeg.py'
 
 KillSignal=SIGINT
 KillMode=mixed

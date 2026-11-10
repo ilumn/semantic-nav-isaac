@@ -85,6 +85,7 @@ public:
     declare_parameter<double>("min_frontier_distance", 0.5);
     declare_parameter<double>("failed_goal_avoidance_radius", 1.0);
     declare_parameter<double>("failed_goal_forget_sec", 180.0);
+    declare_parameter<int>("min_frontier_gain_cells", 40);
     declare_parameter<double>("exploration_complete_log_interval", 5.0);
     declare_parameter<bool>("require_startup_warmup", false);
     declare_parameter<std::string>("startup_warmup_complete_topic", "exploration_warmup_complete");
@@ -273,9 +274,16 @@ private:
     const double avoid_radius = get_parameter("failed_goal_avoidance_radius").as_double();
     const double avoid_radius_sq = avoid_radius * avoid_radius;
 
+    // Best = most unknown space behind the frontier per metre of travel, so a doorway into an unseen
+    // room beats a thin unseen strip along a nearby wall. Frontiers below min_frontier_gain_cells are
+    // only used when nothing better is left.
+    const double min_gain = static_cast<double>(get_parameter("min_frontier_gain_cells").as_int());
     size_t best = 0;
-    double best_dist_sq = 1e30;
+    double best_score = -1.0;
     bool found = false;
+    size_t best_small = 0;
+    double best_small_score = -1.0;
+    bool found_small = false;
 
     for (size_t i = 0; i < frontiers.poses.size(); i++) {
       double gx = frontiers.poses[i].position.x;
@@ -318,13 +326,25 @@ private:
         }
       }
 
-      if (d2 < best_dist_sq) {
-        best_dist_sq = d2;
-        best = i;
-        found = true;
+      const double gain = frontiers.poses[i].position.z;
+      const double score = (gain + 1.0) / (std::sqrt(d2) + 0.5);
+      if (gain >= min_gain) {
+        if (score > best_score) {
+          best_score = score;
+          best = i;
+          found = true;
+        }
+      } else if (score > best_small_score) {
+        best_small_score = score;
+        best_small = i;
+        found_small = true;
       }
     }
 
+    if (!found && found_small) {
+      best = best_small;
+      found = true;
+    }
     if (!found) return std::nullopt;
     if (frame_id.empty()) frame_id = frontiers.header.frame_id;
     return best;
@@ -444,8 +464,8 @@ private:
     double dist = std::sqrt(
       (gx - rx) * (gx - rx) + (gy - ry) * (gy - ry));
 
-    RCLCPP_INFO(get_logger(), "[goal] Selected [%zu] (%.2f, %.2f) dist=%.2f m",
-      best, gx, gy, dist);
+    RCLCPP_INFO(get_logger(), "[goal] Selected [%zu] (%.2f, %.2f) dist=%.2f m gain=%.0f cells",
+      best, gx, gy, dist, frontiers->poses[best].position.z);
 
     {
       std::lock_guard<std::mutex> lock(frontiers_mutex_);

@@ -11,7 +11,10 @@ Commands (one line per connection; replies stream back; the connection closes wh
   disarm | stop          disarm, cancel goals, zero velocity (stop also aborts look/find/go)
   go <text>              arm (exploration off), send the semantic command, wait, disarm
   look <name>            tether-safe stop-and-look until <name> is in memory (stays unarmed)
-  find <name> [<text>]   look, then go (default text "go to the <name>")
+  find <sentence>        work out the object from the sentence ("the trash can", "the sofa",
+                         "somewhere to throw this away", "the chair near the door"); go if
+                         it is in memory, otherwise explore until it is, then go
+  understand <sentence>  say which object find would look for, without moving
 
 Watchdog: while the coordinator is armed or a look/find is turning the robot, stale /scan_slam
 or /odom (> 2.5 s) or map -> base_link (> 3.0 s) disarms, cancels goals and sends zero velocity. The safety gate (semnav_safety.py) sits between /cmd_vel and the motors: this node
@@ -33,7 +36,7 @@ import rclpy
 import tf2_ros
 import yaml
 from ament_index_python.packages import get_package_share_directory
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import PoseArray, Twist
 from nav_msgs.msg import Odometry
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
@@ -41,6 +44,7 @@ from rclpy.time import Time
 from sensor_msgs.msg import CameraInfo, LaserScan
 from std_msgs.msg import Bool, String
 from std_srvs.srv import SetBool
+from tb3_query.query_core import parse_command
 from tb3_semantic_map_msgs.msg import SemanticMapState
 
 SOCKET_PATH = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "semnav.sock")
@@ -59,6 +63,18 @@ TURN_TOL = math.radians(3.0)
 LOOK_STEP_DEG = 30.0
 LOOK_DWELL_S = 2.0
 GO_TIMEOUT_S = 180.0
+FIND_TIMEOUT_S = 300.0
+FIND_NO_FRONTIERS_S = 20.0   # this long with nothing left to explore ends the search
+NOT_REMEMBERED = {"person"}  # excluded_classes in coordinator.yaml: never reaches memory
+
+# Sentence understanding: exact words first, then meaning via the MobileCLIP text encoder that
+# YOLOE already uses. A meaning match needs a clear winner, so "a plant" or "the fridge" are
+# refused rather than guessed as a chair or a door.
+MEANING_MIN_SCORE = 0.70
+MEANING_MIN_MARGIN = 0.02
+COMMAND_PREFIX = re.compile(
+    r"^(please |can you |could you )?(find|go to|go|navigate to|take me to|get to|look for|search for)?"
+    r"( (the|a|an|my|some))?\b\s*")
 
 COORD_STATUS = re.compile(r"^\[(\w+) armed=(\w+) ready=(\w+)\]\s*(.*)$")
 
@@ -117,6 +133,7 @@ class SemnavControl:
         self.mission = {"name": None, "detail": ""}
         self.cancel = threading.Event()
         self.turning = False
+        self.frontiers_seen_at = time.monotonic()
         self.safety: dict = {}
         self.safety_rate = Rate()
         self._safety_enabled_at = 0.0
@@ -131,6 +148,7 @@ class SemnavControl:
         n.create_subscription(SemanticMapState, "/semantic_map/state", self._on_memory, reliable)
         n.create_subscription(String, "/coordinator_node/status", self._on_coordinator, reliable)
         n.create_subscription(String, "/semnav/safety", self._on_safety, 10)
+        n.create_subscription(PoseArray, "/frontiers", self._on_frontiers, 10)
 
         self.cmd_vel = n.create_publisher(Twist, "/cmd_vel", 10)
         self.explore_pub = n.create_publisher(Bool, "/exploration_enabled", reliable)
@@ -144,6 +162,10 @@ class SemnavControl:
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, n)
 
         self.sem2det, self.det2sem = self._load_targets()
+        self.text_model = None
+        self.text_model_error = ""
+        self.text_model_ready = threading.Event()
+        threading.Thread(target=self._load_text_model, daemon=True).start()
 
         n.create_timer(0.2, self._update_tf)
         n.create_timer(0.1, self._watchdog)
@@ -189,6 +211,10 @@ class SemnavControl:
                            "ready": match.group(3) == "True", "text": match.group(4)})
         self.coord["rate"].tick()
 
+    def _on_frontiers(self, msg: PoseArray) -> None:
+        if msg.poses:
+            self.frontiers_seen_at = time.monotonic()
+
     def _on_safety(self, msg: String) -> None:
         self.safety = json.loads(msg.data)
         self.safety_rate.tick()
@@ -217,6 +243,62 @@ class SemnavControl:
         except Exception as exc:  # noqa: BLE001
             self.log.warning(f"could not read semantic targets: {exc}")
             return {}, {}
+
+    def _load_text_model(self) -> None:
+        try:
+            import torch
+            from ultralytics.nn.text_model import build_text_model
+
+            model = build_text_model("mobileclip:blt", device="cpu")
+            labels = sorted(self.det2sem)
+            with torch.no_grad():
+                emb = model.encode_text(model.tokenize(labels)).float()
+            self.label_embeddings = (labels, emb / emb.norm(dim=-1, keepdim=True))
+            self.text_model = model
+            self.log.info("text encoder ready for sentence understanding")
+        except Exception as exc:  # noqa: BLE001
+            self.text_model_error = str(exc)
+            self.log.warning(f"text encoder unavailable, find understands exact names only: {exc}")
+        finally:
+            self.text_model_ready.set()
+
+    def _closest_by_meaning(self, phrase: str) -> list:
+        """(label, score) for every target, best first."""
+        import torch
+
+        labels, label_emb = self.label_embeddings
+        with torch.no_grad():
+            emb = self.text_model.encode_text(self.text_model.tokenize([phrase])).float()
+        scores = (emb / emb.norm(dim=-1, keepdim=True) @ label_emb.T)[0].tolist()
+        return sorted(zip(labels, scores), key=lambda x: -x[1])
+
+    def understand(self, text: str) -> tuple:
+        """Return (semantic name, sentence for the query node, how it was understood)."""
+        norm = re.sub(r"[_\-]", " ", text.lower()).strip()
+        norm = re.sub(r"[^\w\s]", " ", norm)
+        norm = re.sub(r"\s+", " ", norm).strip()
+        # Multi-word detector labels ("trash can") become their semantic names ("trash").
+        for label in sorted(self.det2sem, key=len, reverse=True):
+            norm = re.sub(rf"\b{re.escape(label)}\b", self.det2sem[label], norm)
+        parsed = parse_command(norm, set(self.sem2det))
+        if parsed is not None:
+            target = parsed.target_semantic_name
+            go_text = norm if parsed.has_relation else f"go to the {target}"
+            how = "by name" + (f", {parsed.relation_phrase} the {parsed.reference_semantic_name}"
+                               if parsed.has_relation else "")
+            return target, go_text, how
+        phrase = COMMAND_PREFIX.sub("", norm).strip() or norm
+        if not self.text_model_ready.wait(timeout=60.0) or self.text_model is None:
+            raise RuntimeError(f"did not recognise an object in '{text}' "
+                               f"(meaning matching unavailable: {self.text_model_error or 'still loading'})")
+        ranked = self._closest_by_meaning(phrase)
+        (best, score), (second, second_score) = ranked[0], ranked[1]
+        if score < MEANING_MIN_SCORE or score - second_score < MEANING_MIN_MARGIN:
+            raise RuntimeError(f"not sure what '{text}' refers to "
+                               f"(closest: {best} {score:.2f}, {second} {second_score:.2f}); "
+                               f"known: {', '.join(sorted(self.sem2det))}")
+        target = self.det2sem[best]
+        return target, f"go to the {target}", f"by meaning, {best} {score:.2f} vs {second} {second_score:.2f}"
 
     def resolve(self, name: str) -> tuple:
         """Accept a semantic name ("trash") or a detector label ("trash can"); return both."""
@@ -456,6 +538,45 @@ class SemnavControl:
         say(f"{semantic} not found; back at the start heading")
         return False
 
+    def check_searchable(self, name: str) -> None:
+        semantic, label = self.resolve(name)
+        if label not in self.det2sem:
+            raise RuntimeError(f"'{name}' is not something the detector looks for; "
+                               f"known: {', '.join(sorted(self.sem2det))}")
+        if label in NOT_REMEMBERED:
+            raise RuntimeError(f"{semantic} is never kept in memory, so it cannot be searched for")
+
+    def mission_search(self, say, name: str) -> bool:
+        """Explore until <name> is in memory. Leaves the robot armed: the caller disarms."""
+        semantic, label = self.resolve(name)
+        self.arm(say, explore=True)
+        # Arming only turns exploration on when it was disarmed.
+        self.explore_pub.publish(Bool(data=True))
+        say(f"{semantic} not in memory: exploring until it is found")
+        start = time.monotonic()
+        self.frontiers_seen_at = start
+        known = {m[1] for m in self.memory}
+        while True:
+            self._check()
+            found = self.in_memory(label)
+            if found:
+                say(f"FOUND {semantic} at ({found[0][2]:.2f}, {found[0][3]:.2f}) "
+                    f"after {time.monotonic() - start:.0f} s")
+                return True
+            now = time.monotonic()
+            if now - start > FIND_TIMEOUT_S:
+                say(f"{semantic} not found after {FIND_TIMEOUT_S:.0f} s")
+                return False
+            if now - self.frontiers_seen_at > FIND_NO_FRONTIERS_S:
+                say(f"{semantic} not found: nothing left to explore")
+                return False
+            self.mission["detail"] = f"exploring, {now - start:.0f} s"
+            labels = {m[1] for m in self.memory}
+            if labels - known:
+                say(f"  seen so far: {', '.join(sorted(labels))}")
+                known = labels
+            time.sleep(0.05)
+
     def mission_go(self, say, text: str) -> bool:
         if self.command_pub.get_subscription_count() == 0:
             raise RuntimeError("coordinator is not listening on /user_command (is the stack up?)")
@@ -516,20 +637,33 @@ class SemnavControl:
             self.run_mission("go", say, self.mission_go, rest)
         elif cmd == "look" and rest:
             self.run_mission("look", say, self.mission_look, rest)
+        elif cmd == "understand" and rest:
+            try:
+                semantic, go_text, how = self.understand(rest)
+                say(f"'{rest}' -> {semantic} ({how}); would send: {go_text}")
+            except RuntimeError as exc:
+                say(f"error: {exc}")
         elif cmd == "find" and rest:
-            name, _, text = rest.partition(" ")
-            semantic, _label = self.resolve(name)
-            text = text.strip() or f"go to the {semantic}"
 
             def find(s):
-                if self.mission_look(s, name):
-                    self._set_bool(self.safety_cli, False, "safety gate", timeout=1.0)
-                    self.mission["name"] = "find: go"
-                    self.mission_go(s, text)
+                semantic, text, how = self.understand(rest)
+                s(f"understood '{rest}' as: {semantic} ({how})")
+                if self.in_memory(self.sem2det[semantic]):
+                    s(f"{semantic} is already in memory")
+                else:
+                    self.check_searchable(semantic)
+                    try:
+                        if not self.mission_search(s, semantic):
+                            return
+                    finally:
+                        # Ends exploration and cancels its goal before the semantic goal is sent.
+                        self.disarm(s)
+                self.mission["name"] = "find: go"
+                self.mission_go(s, text)
 
             self.run_mission("find", say, find)
         else:
-            say("commands: status [--json] | arm | explore | disarm | stop | go <text> | look <name> | find <name> [<text>]")
+            say("commands: status [--json] | arm | explore | disarm | stop | go <text> | look <name> | find <sentence> | understand <sentence>")
 
 
 def serve(ctrl: SemnavControl) -> None:

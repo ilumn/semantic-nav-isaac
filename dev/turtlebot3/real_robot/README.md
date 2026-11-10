@@ -7,7 +7,10 @@ Everything that runs on the robot, as systemd user services. `semnav` is the fro
     semnav explore | arm         arm with frontier exploration on | off
     semnav go "go to the door"   arm, send the command, wait, disarm
     semnav look door             turn on the spot until it is in memory
-    semnav find door             look, then go
+    semnav find the trash can    understands sentences and synonyms ("the sofa", "somewhere to
+                                 throw this away"); goes if it is in memory, otherwise explores
+                                 until it is, then goes
+    semnav understand "..."      which object find would look for, without moving
     semnav stop | disarm         stop motion
     semnav dryrun on | off       on: everything runs, the wheels get zero velocity
     semnav logs [unit] [-f]      journald logs

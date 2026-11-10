@@ -59,7 +59,7 @@ semantic_map_node:
     position_smoothing_alpha: 0.3
     stale_timeout: 5.0
     memory_recent_sec: 1.0        # only entities seen this recently feed long-term memory
-    memory_min_observations: 5    # about 0.6 s of detections before an entity can reach memory
+    memory_min_observations: 3    # about 0.4 s of detections before an entity can reach memory
     remove_timeout: 30.0
     publish_rate: 2.0
     enable_refinement_enrichment: true

@@ -1,0 +1,8 @@
+# Foxglove bridge settings. The address is added at start: the Tailscale IP only.
+foxglove_bridge:
+  ros__parameters:
+    port: 8765
+    send_buffer_limit: 2000000
+    # No image topics at all: over a slow link the camera feeds starve the map and robot pose.
+    # To allow the size-capped /compressed feeds again: ['^(?!.*(image_raw|debug_image)$).*']
+    topic_whitelist: ['^(?!.*image).*']

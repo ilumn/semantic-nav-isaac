@@ -27,6 +27,9 @@ frontier_detection_node:
     # Large frontiers get one goal per section of this size.
     frontier_section_m: 1.0
 
+    # Information gain: unknown cells reachable behind a frontier within this distance.
+    gain_radius_m: 2.0
+
     # Max cost at centroid to accept a frontier (0-255). Reject only lethal or
     # out-of-map cells here; Nav2's planner/controller still handle inflated
     # costs when deciding whether the candidate is actually reachable.
@@ -51,7 +54,7 @@ goal_assignment_node:
     navigate_to_pose_action: "navigate_to_pose"
 
     # Ignore frontier centroids closer than this to the robot (m). Avoids sending trivial goals.
-    min_frontier_distance: 0.5
+    min_frontier_distance: 0.8  # 0.5 picked goals almost where it already stood: wasted stop-start hops
 
     # Cancel a goal and try another if the robot has not moved 15 cm for this long (s).
     goal_timeout: 25.0
@@ -68,6 +71,10 @@ goal_assignment_node:
 
     # Failed goals may be retried after this long (s); the map will have changed by then.
     failed_goal_forget_sec: 180.0
+
+    # Goals are picked by unknown area behind the frontier per metre of travel; frontiers with fewer
+    # unknown cells than this (thin strips along walls) are used only when nothing else is left.
+    min_frontier_gain_cells: 40
 
     # Throttle "no valid frontiers" / exploration-complete logs to this interval (s).
     exploration_complete_log_interval: 5.0

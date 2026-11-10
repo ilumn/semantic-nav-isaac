@@ -2,11 +2,15 @@
 """Rotate the upside-down camera 180 degrees at the source.
 
 The USB camera has no hardware flip control, so v4l2_camera publishes on /camera_raw/* and
-this node republishes on /camera/*, which is what everything else consumes. JPEG encoding
-only happens while someone subscribes to the compressed topic.
+this node republishes on /camera/*, which is what everything else consumes.
+
+/camera/image_raw/compressed is for remote viewers such as Foxglove over Tailscale: it is
+encoded only while someone subscribes, and capped in rate and size so it keeps up over a
+relayed link. The robot's own nodes use the full raw image.
 """
 
 import array
+import time
 
 import cv2
 import numpy as np
@@ -14,7 +18,9 @@ import rclpy
 from rclpy.qos import qos_profile_sensor_data as sensor_qos
 from sensor_msgs.msg import CameraInfo, CompressedImage, Image
 
-JPEG_QUALITY = 70
+JPEG_QUALITY = 50
+JPEG_WIDTH = 480
+JPEG_MAX_FPS = 10.0
 
 
 class CameraFlip:
@@ -22,6 +28,7 @@ class CameraFlip:
         self.node = rclpy.create_node("camera_flip")
         self.image_pub = self.node.create_publisher(Image, "/camera/image_raw", sensor_qos)
         self.jpeg_pub = self.node.create_publisher(CompressedImage, "/camera/image_raw/compressed", sensor_qos)
+        self.last_jpeg = 0.0
         self.info_pub = self.node.create_publisher(CameraInfo, "/camera/camera_info", sensor_qos)
         self.node.create_subscription(Image, "/camera_raw/image_raw", self.on_image, sensor_qos)
         self.node.create_subscription(CameraInfo, "/camera_raw/camera_info", self.on_info, sensor_qos)
@@ -32,8 +39,11 @@ class CameraFlip:
         # array.array, not bytes: the generated setter checks bytes element by element in Python.
         msg.data = array.array("B", frame.tobytes())
         self.image_pub.publish(msg)
-        if self.jpeg_pub.get_subscription_count() > 0:
+        now = time.monotonic()
+        if self.jpeg_pub.get_subscription_count() > 0 and now - self.last_jpeg >= 1.0 / JPEG_MAX_FPS:
+            self.last_jpeg = now
             bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR) if msg.encoding == "rgb8" else frame
+            bgr = cv2.resize(bgr, (JPEG_WIDTH, JPEG_WIDTH * msg.height // msg.width), interpolation=cv2.INTER_AREA)
             ok, jpeg = cv2.imencode(".jpg", bgr, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
             if ok:
                 out = CompressedImage(header=msg.header, format="jpeg", data=array.array("B", jpeg.tobytes()))

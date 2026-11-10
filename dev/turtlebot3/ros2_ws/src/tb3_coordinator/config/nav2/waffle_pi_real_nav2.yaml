@@ -45,7 +45,7 @@ controller_server:
     # DWB oscillated here, flipping between small left and right turns with no forward motion.
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      desired_linear_vel: 0.18
+      desired_linear_vel: 0.26
       lookahead_dist: 0.45
       min_lookahead_dist: 0.3
       max_lookahead_dist: 0.7
@@ -65,8 +65,8 @@ controller_server:
       inflation_cost_scaling_factor: 5.0
       use_rotate_to_heading: true
       rotate_to_heading_min_angle: 0.6
-      rotate_to_heading_angular_vel: 0.6
-      max_angular_accel: 1.4
+      rotate_to_heading_angular_vel: 1.5
+      max_angular_accel: 2.5
       allow_reversing: false
       use_interpolation: true
       max_robot_pose_search_dist: 3.0
@@ -185,7 +185,7 @@ behavior_server:
     robot_base_frame: "base_link"
     transform_timeout: 0.2
     simulate_ahead_time: 1.0
-    max_rotational_vel: 0.7
+    max_rotational_vel: 1.5
     min_rotational_vel: 0.2
     rotational_acc_lim: 1.4
 
@@ -204,12 +204,12 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: false
     feedback: "OPEN_LOOP"
-    max_velocity: [0.18, 0.0, 0.7]
-    min_velocity: [-0.08, 0.0, -0.7]
+    max_velocity: [0.26, 0.0, 1.82]  # 0.26 m/s and 1.82 rad/s: TurtleBot3 Waffle Pi hardware maximum
+    min_velocity: [-0.08, 0.0, -1.82]
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0
-    max_accel: [0.7, 0.0, 1.4]
-    max_decel: [-0.7, 0.0, -1.4]
+    max_accel: [1.0, 0.0, 2.5]
+    max_decel: [-1.0, 0.0, -2.5]
     odom_topic: "/odom"
     odom_duration: 0.1
     use_realtime_priority: false

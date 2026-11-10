@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <rclcpp/rclcpp.hpp>
 #include <nav_msgs/msg/occupancy_grid.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
@@ -77,6 +78,7 @@ public:
     declare_parameter<int>("min_cluster_size", 5);
     declare_parameter<int>("cluster_link_radius_cells", 1);
     declare_parameter<double>("frontier_section_m", 1.0);
+    declare_parameter<double>("gain_radius_m", 2.0);
     declare_parameter<int>("cost_threshold", 128);
     declare_parameter<bool>("use_costmap_filter", true);
     declare_parameter<bool>("publish_raw_markers", true);
@@ -123,6 +125,51 @@ private:
    *   where 0 is free and 100 is occupied.
    */
   static bool isFree(int8_t value) { return value == FREE; }
+
+  /**
+   * Unknown cells reachable from a frontier section through unknown space only, within a square of
+   * `radius` cells. Walls stop the count, so a thin unseen strip along a wall scores low and an
+   * opening into an unseen room scores high. Published as the frontier pose's position.z.
+   */
+  static int unknownGain(const nav_msgs::msg::OccupancyGrid & grid, const Cluster & cells, int radius)
+  {
+    const int w = static_cast<int>(grid.info.width);
+    const int h = static_cast<int>(grid.info.height);
+    long sx = 0, sy = 0;
+    for (const Cell & c : cells) {
+      sx += c.first;
+      sy += c.second;
+    }
+    const int cx = static_cast<int>(sx / static_cast<long>(cells.size()));
+    const int cy = static_cast<int>(sy / static_cast<long>(cells.size()));
+    std::vector<uint8_t> seen(static_cast<size_t>(w) * h, 0);
+    std::queue<Cell> q;
+    auto push_if_unknown = [&](int x, int y) {
+        if (x < 0 || y < 0 || x >= w || y >= h) return;
+        if (std::abs(x - cx) > radius || std::abs(y - cy) > radius) return;
+        const size_t idx = static_cast<size_t>(y) * w + x;
+        if (seen[idx] || grid.data[idx] != -1) return;
+        seen[idx] = 1;
+        q.push({x, y});
+      };
+    for (const Cell & c : cells) {
+      push_if_unknown(c.first + 1, c.second);
+      push_if_unknown(c.first - 1, c.second);
+      push_if_unknown(c.first, c.second + 1);
+      push_if_unknown(c.first, c.second - 1);
+    }
+    int count = 0;
+    while (!q.empty()) {
+      const Cell c = q.front();
+      q.pop();
+      count++;
+      push_if_unknown(c.first + 1, c.second);
+      push_if_unknown(c.first - 1, c.second);
+      push_if_unknown(c.first, c.second + 1);
+      push_if_unknown(c.first, c.second - 1);
+    }
+    return count;
+  }
 
   /**
    * @brief Test whether an occupancy value is treated as unknown (or otherwise non-standard) for frontier detection.
@@ -453,6 +500,9 @@ private:
       1, static_cast<int>(get_parameter("frontier_section_m").as_double() / msg->info.resolution));
     const int min_section_cells = 3;
     std::vector<std::pair<double, double>> all_centroids;
+    std::map<std::pair<double, double>, int> gain_at;
+    const int gain_radius = std::max(
+      1, static_cast<int>(get_parameter("gain_radius_m").as_double() / msg->info.resolution));
     for (size_t ci = 0; ci < clusters.size(); ci++) {
       const Cluster & cl = clusters[ci];
       FRONTIER_LOG("[frontier] 3. cluster[%zu] size=%zu", ci, cl.size());
@@ -484,6 +534,7 @@ private:
           }
         }
         all_centroids.emplace_back(goal_x, goal_y);
+        gain_at[{goal_x, goal_y}] = unknownGain(*msg, section.second, gain_radius);
       }
       FRONTIER_LOG("[frontier] 4. cluster[%zu] centroid (representative): (%.3f, %.3f)", ci, cx, cy);
     }
@@ -547,7 +598,8 @@ private:
     for (size_t i = 0; i < safe_centroids.size(); i++) {
       pose_array.poses[i].position.x = safe_centroids[i].first;
       pose_array.poses[i].position.y = safe_centroids[i].second;
-      pose_array.poses[i].position.z = 0.0;
+      // z carries the frontier's information gain (unknown cells behind it), see unknownGain.
+      pose_array.poses[i].position.z = static_cast<double>(gain_at[safe_centroids[i]]);
       pose_array.poses[i].orientation.w = 1.0;
       pose_array.poses[i].orientation.x = 0.0;
       pose_array.poses[i].orientation.y = 0.0;

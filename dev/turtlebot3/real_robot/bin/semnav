@@ -7,7 +7,9 @@
 #   semnav disarm | stop       disarm and zero velocity (stop also aborts look/find/go)
 #   semnav go "go to the door" arm, send the command, wait, disarm
 #   semnav look door           tether-safe look-around until it is in memory
-#   semnav find door ["text"]  look, then go
+#   semnav find the trash can  understands sentences and synonyms; goes if it is in memory,
+#                              otherwise explores until it is, then goes
+#   semnav understand "..."    which object find would look for, without moving
 #   semnav restart <unit>      safety | base | scan | camera | camflip | foxglove | detimg | control | stack
 #   semnav logs [unit] [-f]    journald logs (all semnav units if no unit given)
 #   semnav sh                  shell with the robot's ROS environment (ros2 topic list, ...)
@@ -79,7 +81,7 @@ case "${1:-status}" in
     wait_ready 150 || echo "stack is not healthy yet; see \`semnav status\` and \`semnav logs stack\`"
     ctl status; services ;;
   arm|explore|disarm|stop) ctl "$1" ;;
-  go|look|find) cmd=$1; shift; [ $# -gt 0 ] || { sed -n 2,15p "$0"; exit 2; }; ctl "$cmd $*" ;;
+  go|look|find|understand) cmd=$1; shift; [ $# -gt 0 ] || { sed -n 2,17p "$0"; exit 2; }; ctl "$cmd $*" ;;
   restart) [ -n "${2:-}" ] || { echo "usage: semnav restart <unit>"; exit 2; }
     systemctl --user restart "semnav-$2"; systemctl --user --no-pager status "semnav-$2" | head -3 ;;
   logs)  # user-unit logs land in the system journal on this Jetson (volatile journald)
@@ -100,5 +102,5 @@ case "${1:-status}" in
       *) echo "usage: semnav dryrun on|off"; exit 2 ;;
     esac
     echo "dry run ${2}" ;;
-  *) sed -n 2,15p "$0"; exit 2 ;;
+  *) sed -n 2,17p "$0"; exit 2 ;;
 esac
